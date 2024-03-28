@@ -53,6 +53,7 @@ def startup():
 
 def get_server_wallet():
     server_wallet = bt.wallet(name="server", hotkey="default")
+    server_wallet.create_if_non_existent(coldkey_use_password=False)
     if redis_db.hget("server_wallet", "name") is None:
         server_wallet.create(coldkey_use_password=False, hotkey_use_password=False)
         redis_db.hset("server_wallet", "name", server_wallet.name)
