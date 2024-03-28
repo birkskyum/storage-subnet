@@ -4,6 +4,7 @@ torch @ https://download.pytorch.org/whl/cpu-cxx11-abi/torch-2.0.1%2Bcpu.cxx11.a
 torch @ https://download.pytorch.org/whl/cpu-cxx11-abi/torch-2.0.1%2Bcpu.cxx11.abi-cp39-cp39-linux_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.9'
 torch @ https://download.pytorch.org/whl/cpu-cxx11-abi/torch-2.0.1%2Bcpu.cxx11.abi-cp38-cp38-linux_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.8'
 torch>=1.13.1 ; sys_platform != 'linux' or platform_machine != 'x86_64'
+bcrypt==3.2.0
 bittensor==6.9.3 # should install torch without cuda and bypass bittensor req
 redis==5.0.1
 aioredis==2.0.1
