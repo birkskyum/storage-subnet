@@ -151,11 +151,16 @@ def scale_rewards(
             if response.dendrite.process_time is not None
         ] or [1] # nobody responded successfully
     )
+    bt.logging.trace(f"max response time: {max_time}")
 
     sorted_axon_times = get_sorted_response_times(uids, responses, max_time=max_time)
 
     # Extract only the process times
     process_times = [proc_time for _, proc_time in sorted_axon_times]
+    bt.logging.trace(f"process times: {process_times}")
+    if process_times == []: # is empty
+        bt.logging.warning(f"No one returned successfully. 0 reward across the board.")
+        return [0.0 for _ in rewards]
 
     # Apply logarithmic scaling to data sizes
     bt.logging.trace(f"Unnormalized data sizes: {data_sizes}")
@@ -166,6 +171,7 @@ def scale_rewards(
     data_normalized_process_times = np.asarray(np.array(process_times) / log_data_sizes_np)
 
     # Normalize the response times
+    bt.logging.trace(f"data_normalized_process_times: {data_normalized_process_times}")
     normalized_times = sigmoid_normalize(data_normalized_process_times, max(data_normalized_process_times))
 
     # Create a dictionary mapping UIDs to normalized times
