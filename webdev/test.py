@@ -52,7 +52,16 @@ def upload_multiple_files(base_url, token: str, files_content: List[Tuple[str, s
 def retrieve_user_data(base_url, token: str, file_hash: str):
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(f"{base_url}/retrieve/{file_hash}", headers=headers)
-    return response.json()
+    if response.headers.get('Content-Type') == 'application/json':
+        # Handle JSON response
+        return response.json()
+    else:
+        # Handle file response, save to a file, or process as needed
+        file_content = response.content
+        # Example: save to a local file
+        with open(file_hash, 'wb') as f:
+            f.write(file_content)
+        return {"success": True, "message": "File downloaded successfully."}
 
 # Add some fake users to the database
 def test_create_fake_users():
