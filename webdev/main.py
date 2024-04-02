@@ -102,6 +102,8 @@ async def register_user(user_info: UserInfo):
     name = user_wallet.name
     hotkey = user_wallet.hotkey.ss58_address
     mnemonic = user_wallet.coldkey.mnemonic
+    if mnemonic is None:
+        raise HTTPException(status_code=500, detail="Mnemonic not generated")
 
     user = UserInDB(
         username = username, 
