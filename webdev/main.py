@@ -183,8 +183,13 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
     metadata = get_file_metadata(filename)
     hotkeys = metadata.get("hotkeys")
 
+    metagraph = get_metagraph()
+    uids = None
+    if hotkeys is not None:
+        uids = [metagraph.hotkeys.index(hotkey) for hotkey in hotkeys]
+
     # Fetch the axons of the available API nodes, or specify UIDs directly
-    axons = await get_query_api_axons(wallet=server_wallet, metagraph=metagraph, hotkeys=hotkeys)
+    axons = await get_query_api_axons(wallet=server_wallet, metagraph=metagraph, uids=uids)
 
     metadata = get_file_metadata(filename)
     cid = metadata["cid"]
