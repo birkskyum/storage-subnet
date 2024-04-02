@@ -1,6 +1,7 @@
 import requests
 import argparse
 from typing import List, Tuple
+from webdev.database import get_database, UserInDB, create_user, get_user
 
 def register_user(base_url, username: str, password: str):
     response = requests.post(f"{base_url}/register/", json={"username": username, "password": password})
