@@ -17,6 +17,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import os
 import torch
 import base64
 import bittensor as bt
@@ -24,6 +25,8 @@ from typing import Any, List, Union
 from storage.protocol import RetrieveUser
 from storage.validator.encryption import decrypt_data_with_private_key
 from storage.api.utils import get_query_api_axons
+from storage.shared.utils import list_all_hashes
+from storage.cli.default_values import defaults
 
 
 class RetrieveUserAPI(bt.SubnetsAPI):
@@ -81,11 +84,38 @@ async def retrieve(
     timeout: int = 60,
     uids: List[int] = None,
     hotkeys: List[str] = None,
+    metadata_path: str = None,
+    name: str = None,
 ) -> bytes:
+    """
+    Retrieve data from the subtensor network.
+
+    Args:
+        cid (str): The hash of the data to retrieve.
+        wallet (bt.wallet): The wallet to use for the retrieval.
+        subtensor (bt.subtensor, optional): The subtensor network to use. Defaults to None.
+        chain_endpoint (str, optional): The chain endpoint to use. Defaults to "finney".
+        netuid (int, optional): The netuid to use. Defaults to 21.
+        timeout (int, optional): The timeout for the retrieval. Defaults to 60.
+        uids (List[int], optional): The uids to use for the retrieval. Defaults to None.
+        hotkeys (List[str], optional): The hotkeys to use for the retrieval. Defaults to None.
+        metadata_path (str, optional): The path to the hash metadata. Defaults to None.
+        name (str, optional): The name of the file to find metadata for. Defaults to None.
+    """
+
     retrieve_handler = RetrieveUserAPI(wallet)
 
     subtensor = subtensor or bt.subtensor(chain_endpoint)
     metagraph = subtensor.metagraph(netuid=netuid)
+
+    metadata_path = os.path.expanduser(metadata_path or defaults.hash_basepath)
+    hash_filepath = os.path.join(metadata_path, wallet.name + ".json")
+
+    hashes_dict = list_all_hashes(hash_filepath)
+    reverse_hashes_dict = {v: k for k, v in hashes_dict.items() if "hotkeys" not in k}
+    if cid in reverse_hashes_dict:
+        filename = reverse_hashes_dict[cid]
+        hotkeys = hashes_dict[filename + "_hotkeys"]
 
     if uids is None and hotkeys is not None:
         uids = [metagraph.hotkeys.index(hotkey) for hotkey in hotkeys]

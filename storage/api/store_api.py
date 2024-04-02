@@ -17,6 +17,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import os
 import torch
 import base64
 import random
@@ -27,6 +28,8 @@ from storage.protocol import StoreUser
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import encrypt_data
 from storage.api.utils import get_query_api_axons
+from storage.cli.default_values import defaults
+from storage.shared.utils import get_coldkey_wallets_for_path, get_hash_mapping, save_hash_mapping
 
 
 class StoreUserAPI(bt.SubnetsAPI):
@@ -98,6 +101,8 @@ async def store(
     encoding: str = "utf-8",
     timeout: int = 60,
     uid: int = None,
+    metadata_path: str = None,
+    name: str = None,
 ):
 
     """
@@ -114,6 +119,8 @@ async def store(
         encoding (str, optional): The encoding of the data. Defaults to "utf-8".
         timeout (int, optional): The timeout in seconds for storing data. Defaults to 60.
         uid (int, optional): The UID of a specific API node to use for storing data. Defaults to None.
+        metadata_path (str, optionla): The path to store the metadata object for associating hotkeys.
+        name (str, optional): String name of the data to associate with metadata.
 
     Returns:
         str: The CID of the stored data.
@@ -140,5 +147,13 @@ async def store(
         uid=uid,
         timeout=timeout,
     )
+
+    metadata_path = os.path.expanduser(metadata_path or defaults.hash_basepath)
+    hash_filepath = os.path.join(metadata_path, wallet.name + ".json")
+    if not os.path.exists(hash_filepath):
+        os.mkdirs(hash_filepath)
+
+    if hotkeys != []:
+        save_hash_mapping(hash_filepath, name or cid, cid, hotkeys)
 
     return cid, hotkeys
