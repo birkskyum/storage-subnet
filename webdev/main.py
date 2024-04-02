@@ -168,7 +168,7 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
         # Store the encrpyiton payload in the user db for later retrieval
         store_file_metadata(file.filename, cid, hotkeys, encryption_payload)
 
-    return cid
+    return cid, hotkeys
 
 # File Retrieval Endpoint
 @app.get("/retrieve/{filename}")
