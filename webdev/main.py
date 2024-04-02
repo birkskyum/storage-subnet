@@ -179,6 +179,7 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
     user_wallet = bt.wallet(name = wallet_name, hotkey = wallet_hotkey)
 
     metadata = get_file_metadata(filename)
+    hotkeys = metadata.get("hotkeys")
 
     # Fetch the axons of the available API nodes, or specify UIDs directly
     axons = await get_query_api_axons(wallet=server_wallet, metagraph=metagraph, hotkeys=hotkeys)
