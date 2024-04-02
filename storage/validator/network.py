@@ -195,6 +195,8 @@ async def monitor(self):
 
     down_uids = []
     for uid in failed_uids:
+        if uid not in self.monitor_lookup:
+            self.monitor_lookup[uid] = 0
         self.monitor_lookup[uid] += 1
         if self.monitor_lookup[uid] > 5:
             self.monitor_lookup[uid] = 0
