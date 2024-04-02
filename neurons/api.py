@@ -286,15 +286,21 @@ class neuron:
         )
 
     async def store_priority(self, synapse: protocol.StoreUser) -> float:
+        if self.config.api.open_access:
+            return 1.0
+
         caller_uid = self.metagraph.hotkeys.index(
             synapse.dendrite.hotkey
         )  # Get the caller index.
+
         priority = float(
             self.metagraph.S[caller_uid]
         )  # Return the stake as the priority.
+
         bt.logging.trace(
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", priority
         )
+
         return priority
 
     async def retrieve_user_data(
