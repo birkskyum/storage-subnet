@@ -197,36 +197,14 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
 
     success = False
     try:
-        responses = await retrieve_handler(
+        decrypted_data = await retrieve_handler(
             axons=axons,
             cid=cid,
             timeout=60
         )
-
-        for response in responses:
-            if (
-                response.dendrite.status_code != 200
-                or response.encrypted_data == None
-            ):
-                continue
-
-            # Decrypt the response
-            encrypted_data = base64.b64decode(response.encrypted_data)
-            
-            if ( # If the user did not encrypt the data initially, we don't need to decrypt it
-                encryption_payload == None
-                or encryption_payload == ""
-                or encryption_payload == "{}"
-            ):
-                decrypted_data = encrypted_data
-            else:
-                decrypted_data = decrypt_data_with_private_key(
-                    encrypted_data,
-                    encryption_payload,
-                    bytes(user_wallet.coldkey.private_key.hex(), "utf-8"),
-                )
+        bt.logging.info(f"Response: {decrypted_data}")
+        if decrypted_data != b"":
             success = True
-            break  # No need to keep going if we returned data.
 
         if success:
             # Save the data to a temporary file on the server
