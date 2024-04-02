@@ -108,11 +108,11 @@ def main():
     print("Access Token:", token)
 
     print("Uploading file...")
-    upload_response = upload_file(base_url, token, file_content)
+    cid, hotkeys = upload_file(base_url, token, file_content)
     print(upload_response)
 
     print("Retrieving file...")
-    retrieved_data = retrieve_user_data(base_url, token, upload_response['file_hash'])
+    retrieved_data = retrieve_user_data(base_url, token, 'test.txt')
     print(retrieved_data)
 
 # if __name__ == "__main__":
