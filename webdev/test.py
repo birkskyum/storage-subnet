@@ -118,7 +118,7 @@ def main():
 
     print("Uploading file...")
     cid, hotkeys = upload_file(base_url, token, file_content)
-    print(upload_response)
+    print(cid, hotkeys)
 
     print("Retrieving file...")
     retrieved_data = retrieve_user_data(base_url, token, 'test.txt')
