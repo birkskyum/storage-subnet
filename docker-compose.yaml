@@ -4,25 +4,22 @@ volumes:
   redis-prod-data:
     name: "filetao-redis-data"
 
-services:
-  common: &common
-    #image: noimageyet
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: always
-    depends_on:
-      redis:
-        condition: service_healthy
-    volumes:
-      - ${BT_WALLETS_BASE_PATH}/.bittensor/wallets:/root/.bittensor/wallets
-      - ${REDIS_CONF}:/etc/redis/redis.conf
-      - ./scripts:/install/scripts
+x-common: &common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: always
+  depends_on:
+    redis:
+      condition: service_healthy
+  volumes:
+    - ${BT_WALLETS_BASE_PATH}/.bittensor/wallets:/root/.bittensor/wallets
+    - ${REDIS_CONF}:/etc/redis/redis.conf
+    - ./scripts:/install/scripts
 
+services:
   filetao-prod: &filetao-prod
     <<: *common
-    build:
-      target: filetao-prod
     network_mode: host
     command:
       - /bin/bash
