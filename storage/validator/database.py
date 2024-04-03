@@ -1193,12 +1193,12 @@ async def compute_by_tier_stats(database):
                 'total_global_successes': 0,
             }
 
-        tier_stats[tier]['store_attempts'] += int(d['store_attempts'])
-        tier_stats[tier]['store_successes'] += int(d['store_successes'])
-        tier_stats[tier]['challenge_attempts'] += int(d['challenge_attempts'])
-        tier_stats[tier]['challenge_successes'] += int(d['challenge_successes'])
-        tier_stats[tier]['retrieve_attempts'] += int(d['retrieve_attempts'])
-        tier_stats[tier]['retrieve_successes'] += int(d['retrieve_successes'])
+        tier_stats[tier]['store_attempts'] += int(d.get('store_attempts', 0))
+        tier_stats[tier]['store_successes'] += int(d.get('store_successes', 0))
+        tier_stats[tier]['challenge_attempts'] += int(d.get('challenge_attempts', 0))
+        tier_stats[tier]['challenge_successes'] += int(d.get('challenge_successes', 0))
+        tier_stats[tier]['retrieve_attempts'] += int(d.get('retrieve_attempts', 0))
+        tier_stats[tier]['retrieve_successes'] += int(d.get('retrieve_successes', 0))
 
         tier_stats[tier]['total_current_attempts'] = sum([
             tier_stats[tier]['store_attempts'], 
@@ -1210,7 +1210,7 @@ async def compute_by_tier_stats(database):
             tier_stats[tier]['challenge_successes'], 
             tier_stats[tier]['retrieve_successes']
         ])
-        tier_stats[tier]['total_global_successes'] += int(d['total_successes'])
+        tier_stats[tier]['total_global_successes'] += int(d.get('total_successes', 0))
 
         total_attempts = tier_stats[tier]['total_current_attempts']
         total_successes = tier_stats[tier]['total_current_successes']
