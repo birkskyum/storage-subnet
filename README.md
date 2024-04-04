@@ -1229,7 +1229,6 @@ You are free to use this provided docker convenience but may still run nodes on 
      - `REDIS_PASSWORD`: Your redis instance password.
      - `REDIS_PORT`: Port to run redis within a docker container (same port is exposed)
      - `REDIS_CONF`: Your redis conf path. If you use the base one provided in this repository it could be `./config/redis-docker.conf`.
-     - `FILETAO_NODE`: Type of node you want to run. To be miner, validator or api.
      - `FILETAO_WALLET`: Bittensor wallet name to use.
      - `FILETAO_HOTKEY`: Bittensor hotkey name to use.
      - `FILETAO_NETUID`: Net UID of the bittensor subnet to connect.
