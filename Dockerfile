@@ -1,40 +1,46 @@
 ARG BASE_IMAGE=python:3.10.12-slim
-FROM $BASE_IMAGE AS builder-prod
+FROM $BASE_IMAGE AS builder
 
-# This is being set so that no interactive components are allowed when updating.
+# Set a non-interactive frontend to avoid any interactive prompts during the build
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Create directory to copy files to
-RUN mkdir /install/
-WORKDIR /install
+RUN mkdir -p /source/ /opt/filetao/
+WORKDIR /source
 
-# Copy our sources
-COPY ./neurons /install/neurons
-COPY ./storage /install/storage
-COPY ./scripts /install/scripts
-COPY ./setup.py /install/setup.py
-COPY ./requirements.txt /install/requirements.txt
-COPY ./requirements-dev.txt /install/requirements-dev.txt
-COPY ./README.md /install/README.md
+# Install dependencies first, so source code changes don't invalidate the build cache
+COPY requirements.txt /source/
+RUN --mount=type=cache,target=/root/.cache/ \
+ python -m pip install --prefix=/opt/filetao -r requirements.txt
 
-RUN python -m pip install --prefix=/install .
+COPY ./README.md ./setup.py ./requirements-dev.txt /source/
+COPY ./neurons /source/neurons
+COPY ./storage /source/storage
+RUN python -m pip install --prefix=/opt/filetao --no-deps .
 
-#
-# Stage for running filetao on productive servers
-#
-FROM $BASE_IMAGE AS filetao-prod
+COPY ./bin /opt/filetao/bin
+COPY ./scripts /opt/filetao/scripts
 
-ARG NEURON_TYPE=miner
-ARG WANDB_API_KEY
-
-COPY --from=builder-prod /install/bin/ /usr/local/bin
-COPY --from=builder-prod /install/lib/ /usr/local/lib
+FROM $BASE_IMAGE AS filetao
 
 RUN mkdir -p ~/.bittensor/wallets && \
     mkdir -p /etc/redis/
 
-ENV PATH="${PATH}:/usr/local/bin:/usr/local/lib"
-ENV WANDB_API_KEY=$WANDB_API_KEY
-ENV REBALANCE_SCRIPT_PATH=/install/scripts/rebalance_deregistration.sh
+COPY --from=builder /opt/filetao /opt/filetao
 
-#RUN wandb login
+ENV PATH="/opt/filetao/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/filetao/lib:${LD_LIBRARY_PATH}"
+ENV REBALANCE_SCRIPT_PATH=/opt/filetao/scripts/rebalance_deregistration.sh
+ENV PYTHONPATH="/opt/filetao/lib/python3.10/site-packages:${PYTHONPATH}"
+
+CMD ["sh", "-c", "filetao run ${FILETAO_NODE} \
+    --wallet.name ${FILETAO_WALLET} \
+    --wallet.hotkey ${FILETAO_HOTKEY} \
+    --netuid ${FILETAO_NETUID} \
+    --axon.port ${FILETAO_EXTERNAL_PORT} \
+    --axon.external_port ${FILETAO_EXTERNAL_PORT} \
+    --subtensor.network ${FILETAO_SUBTENSOR} \
+    --database.host localhost \
+    --database.port ${REDIS_PORT} \
+    --database.redis_password ${REDIS_PASSWORD} \
+    ${FILETAO_EXTRA_OPTIONS}"]

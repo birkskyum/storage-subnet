@@ -1,50 +1,35 @@
-version: '3.8'
-
 volumes:
   redis-prod-data:
     name: "filetao-redis-data"
 
-x-common: &common
-  build:
-    context: .
-    dockerfile: Dockerfile
-  restart: always
-  depends_on:
-    redis:
-      condition: service_healthy
-  volumes:
-    - ${BT_WALLETS_BASE_PATH}/.bittensor/wallets:/root/.bittensor/wallets
-    - ${REDIS_CONF}:/etc/redis/redis.conf
-    - ./scripts:/install/scripts
-
 x-filetao: &filetao
-    <<: *common
+    image: filetao
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ${BT_WALLETS_BASE_PATH}:/root/.bittensor/wallets
+      - ${REDIS_CONF}:/etc/redis/redis.conf
+      - ./scripts:/install/scripts
+    env_file:
+      - .env
     network_mode: host
-    command:
-      - /bin/bash
-      - -c
-      - |
-        filetao run ${FILETAO_NODE} \
-          --wallet.name ${FILETAO_WALLET}  \
-          --wallet.hotkey ${FILETAO_HOTKEY} \
-          --netuid ${FILETAO_NETUID} \
-          --axon.port ${FILETAO_EXTERNAL_PORT} \
-          --axon.external_port ${FILETAO_EXTERNAL_PORT} \
-          --subtensor.network ${FILETAO_SUBTENSOR} \
-          --database.host localhost \
-          --database.port ${REDIS_PORT} \
-          --database.redis_password ${REDIS_PASSWORD} \
-          ${FILETAO_EXTRA_OPTIONS}
 
 services:
   filetao-miner:
     <<: *filetao
     volumes:
-      - ${BT_WALLETS_BASE_PATH}/.bittensor/wallets:/root/.bittensor/wallets
       - ${REDIS_CONF}:/etc/redis/redis.conf
       - ${FILETAO_MINER_DATA_DIR}:/root/.data/
     environment:
       - FILETAO_NODE=miner
+    env_file:
+      - path: filetao-miner.env
+        required: false
 
   filetao-validator:
     <<: *filetao
@@ -52,26 +37,18 @@ services:
       - filetao-api
     environment:
       - FILETAO_NODE=validator
+    env_file:
+      - path: filetao-validator.env
+        required: false
 
   filetao-api:
     <<: *filetao
     environment:
       - FILETAO_NODE=api
-    command:
-      - /bin/bash
-      - -c
-      - |
-        filetao run api \
-          --wallet.name ${FILETAO_WALLET}  \
-          --wallet.hotkey ${FILETAO_HOTKEY} \
-          --netuid ${FILETAO_NETUID} \
-          --axon.port ${FILETAO_EXTERNAL_PORT} \
-          --axon.external_port ${FILETAO_API_EXTERNAL_PORT} \
-          --subtensor.network ${FILETAO_SUBTENSOR} \
-          --database.host localhost \
-          --database.port ${REDIS_PORT} \
-          --database.redis_password ${REDIS_PASSWORD} \
-          ${FILETAO_EXTRA_OPTIONS}
+      - FILETAO_EXTERNAL_PORT=${FILETAO_API_EXTERNAL_PORT}
+    env_file:
+      - path: filetao-api.env
+        required: false
 
   redis:
     image: redis:7.2.4-alpine
