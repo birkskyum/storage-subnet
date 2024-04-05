@@ -37,9 +37,8 @@ x-filetao: &filetao
           ${FILETAO_EXTRA_OPTIONS}
 
 services:
-  filetao-miner-prod:
+  filetao-miner:
     <<: *filetao
-    container_name: filetao-miner-prod
     volumes:
       - ${BT_WALLETS_BASE_PATH}/.bittensor/wallets:/root/.bittensor/wallets
       - ${REDIS_CONF}:/etc/redis/redis.conf
@@ -47,17 +46,15 @@ services:
     environment:
       - FILETAO_NODE=miner
 
-  filetao-validator-prod:
+  filetao-validator:
     <<: *filetao
-    container_name: filetao-validator-prod
     depends_on:
-      - filetao-api-prod
+      - filetao-api
     environment:
       - FILETAO_NODE=validator
 
-  filetao-api-prod:
+  filetao-api:
     <<: *filetao
-    container_name: filetao-api-prod
     environment:
       - FILETAO_NODE=api
     command:
