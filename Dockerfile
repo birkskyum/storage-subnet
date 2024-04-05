@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=python:3.10.12-slim
+ARG BASE_IMAGE=python:3.11-slim
 FROM $BASE_IMAGE AS builder
 
 # Set a non-interactive frontend to avoid any interactive prompts during the build
@@ -18,6 +18,8 @@ COPY ./neurons /source/neurons
 COPY ./storage /source/storage
 RUN python -m pip install --prefix=/opt/filetao --no-deps .
 
+# symlink lib/pythonVERSION to lib/python so path doesn't need to be hardcoded
+RUN ln -rs /opt/filetao/lib/python* /opt/filetao/lib/python
 COPY ./bin /opt/filetao/bin
 COPY ./scripts /opt/filetao/scripts
 
@@ -31,7 +33,7 @@ COPY --from=builder /opt/filetao /opt/filetao
 ENV PATH="/opt/filetao/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/opt/filetao/lib:${LD_LIBRARY_PATH}"
 ENV REBALANCE_SCRIPT_PATH=/opt/filetao/scripts/rebalance_deregistration.sh
-ENV PYTHONPATH="/opt/filetao/lib/python3.10/site-packages:${PYTHONPATH}"
+ENV PYTHONPATH="/opt/filetao/lib/python/site-packages/:${PYTHONPATH}"
 
 CMD ["sh", "-c", "filetao run ${FILETAO_NODE} \
     --wallet.name ${FILETAO_WALLET} \
