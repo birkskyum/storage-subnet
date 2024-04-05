@@ -1228,12 +1228,14 @@ You are free to use this provided docker convenience but may still run nodes on 
      - `WANDB_API_KEY`: Your wandb API key.
      - `BT_WALLETS_BASE_PATH`: The base path of your bittensor wallets. Typically equivalent to `$HOME/.bittensor/wallets`.
      - `REDIS_PASSWORD`: Your redis instance password.
+     - `REDIS_HOST`: optional, default is 127.0.0.1, IP to which redis should be attached.
      - `REDIS_PORT`: Port to run redis within a docker container (same port is exposed)
      - `REDIS_CONF`: Your redis conf path. If you use the base one provided in this repository it could be `./config/redis-docker.conf`.
      - `FILETAO_WALLET`: Bittensor wallet name to use.
      - `FILETAO_HOTKEY`: Bittensor hotkey name to use.
-     - `FILETAO_NETUID`: Net UID of the bittensor subnet to connect.
+     - `FILETAO_NETUID`: optional, default is 21, Net UID of the bittensor subnet to connect.
      - `FILETAO_SUBTENSOR`: Subtensor network to connect.
+     - `FILETAO_IP`: optional, default is 0.0.0.0 (any), IP to be used by the neuron's container.
      - `FILETAO_EXTERNAL_PORT`: Port to be used externally (in the host) by the neuron's container.
      - `FILETAO_API_EXTERNAL_PORT`: Port to be used externally (in the host) by the api neuron's container
      - `FILETAO_MINER_DATA_DIR`: Host data directory to be mapped to the neuron's container (used in the miner neuron)

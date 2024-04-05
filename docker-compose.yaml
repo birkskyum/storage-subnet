@@ -23,21 +23,26 @@ services:
   filetao-miner:
     <<: *filetao
     volumes:
+      - ${BT_WALLETS_BASE_PATH}:/root/.bittensor/wallets
       - ${REDIS_CONF}:/etc/redis/redis.conf
+      - ./scripts:/install/scripts
       - ${FILETAO_MINER_DATA_DIR}:/root/.data/
     environment:
       - FILETAO_NODE=miner
     env_file:
+      - .env
       - path: filetao-miner.env
         required: false
 
   filetao-validator:
     <<: *filetao
     depends_on:
-      - filetao-api
+      filetao-api:
+        condition: service_started
     environment:
       - FILETAO_NODE=validator
     env_file:
+      - .env
       - path: filetao-validator.env
         required: false
 
@@ -47,6 +52,7 @@ services:
       - FILETAO_NODE=api
       - FILETAO_EXTERNAL_PORT=${FILETAO_API_EXTERNAL_PORT}
     env_file:
+      - .env
       - path: filetao-api.env
         required: false
 
@@ -61,8 +67,10 @@ services:
     command:
       - redis-server
       - /etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD}
     ports:
-      - "${REDIS_PORT}:6379"
+      - "${REDIS_HOST:-127.0.0.1}:${REDIS_PORT}:6379"
     volumes:
       - redis-prod-data:/data
       - ${REDIS_CONF}:/etc/redis/redis.conf
