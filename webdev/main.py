@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import base64
 import bittensor as bt
@@ -12,9 +13,10 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 from storage.validator.encryption import encrypt_data, decrypt_data_with_private_key
-from storage.api import StoreUserAPI, RetrieveUserAPI, get_query_api_axons
+from storage.api import StoreUserAPI, RetrieveUserAPI, get_query_api_axons, store, retrieve
 from webdev.database import startup, get_database, get_user, create_user, get_server_wallet, get_metagraph
 from webdev.database import Token, TokenData, User, UserInDB, store_file_metadata, get_file_metadata
+from webdev.database import get_user_metadata
 
 os.environ['ACCESS_TOKEN_EXPIRE_MINUTES']='15'
 os.environ['ALGORITHM']='HS256'
@@ -166,21 +168,32 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
             raise HTTPException(status_code=500, detail="No hotkeys returned from store_handler. Data not stored.")
 
         # Store the encrpyiton payload in the user db for later retrieval
-        store_file_metadata(file.filename, cid, hotkeys, encryption_payload)
+        splt = file.filename.split(os.path.extsep)
+        filename_no_ext = splt[0]
+        ext = splt[-1] if len(splt) > 1 else ""
+        store_file_metadata(
+            username=current_user.username,
+            filename=filename_no_ext,
+            cid=cid,
+            hotkeys=hotkeys,
+            payload=encryption_payload,
+            ext=ext,
+            size=sys.getsizeof(encrypted_data),
+        )
 
     return cid, hotkeys
 
 # File Retrieval Endpoint
 @app.get("/retrieve/{filename}")
 async def retrieve_user_data(filename: str, current_user: User = Depends(get_current_user)):
-    # TODO: not sure if we should take CID or filename to get from the redis db?
 
     # Access wallet_name and wallet_hotkey from current_user
     wallet_name = current_user.wallet_name
     wallet_hotkey = current_user.wallet_hotkey
     user_wallet = bt.wallet(name = wallet_name, hotkey = wallet_hotkey)
 
-    metadata = get_file_metadata(filename)
+    cid = get_cid_by_filename(filename, current_user.username)
+    metadata = get_cid_metadata(cid, current_user.username)
     hotkeys = metadata.get("hotkeys")
 
     metagraph = get_metagraph()
@@ -191,9 +204,8 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
     # Fetch the axons of the available API nodes, or specify UIDs directly
     axons = await get_query_api_axons(wallet=server_wallet, metagraph=metagraph, uids=uids)
 
-    metadata = get_file_metadata(filename)
-    cid = metadata["cid"]
-    encryption_payload = metadata["encryption_payload"]
+    # TODO: do user decryption if necessary
+    encryption_payload = metadata.get("encryption_payload", {})
 
     success = False
     try:
@@ -217,3 +229,11 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Perhaps this doesn't need username if we can parse it from the `User` object?
+@app.get("/user_data/{username}")
+async def get_user_data(username: str, current_user: User = Depends(get_current_user)):
+    user = get_user(username)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return get_user_metadata(username)

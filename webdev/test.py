@@ -1,3 +1,4 @@
+import sys
 import requests
 import argparse
 from typing import List, Tuple
@@ -95,18 +96,22 @@ def test_create_fake_users():
     user = get_user("johndoe")
     assert user == fake_user_john, "User doesn't match expected"
 
+def get_user_metadata(base_url, token: str, username: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    return requests.get(f"{base_url}/user_data/{username}", headers=headers).json()
+
 
 def main():
     parser = argparse.ArgumentParser(description="Test FastAPI application")
     parser.add_argument('--host', type=str, default='localhost', help='Host where the FastAPI app is running')
-    parser.add_argument('--port', type=str, default='8000', help='Port on which the FastAPI app is running')
+    parser.add_argument('--port', type=str, default='8001', help='Port on which the FastAPI app is running')
     args = parser.parse_args()
 
     base_url = f"http://{args.host}:{args.port}"
 
-    username = "testuser"
-    password = "testpassword"
-    file_content = "This is a test string."
+    username = "janedoe"
+    password = "password123"
+    file_content = "This is a test string, bitches2"
 
     print("Registering user...")
     register_response = register_user(base_url, username, password)
@@ -123,6 +128,10 @@ def main():
     print("Retrieving file...")
     retrieved_data = retrieve_user_data(base_url, token, 'test.txt')
     print(retrieved_data)
+
+    print("Getting user metadata...")
+    user_metadata = get_user_metadata(base_url, token, username)
+    print("User Metadata:", user_metadata)
 
 # if __name__ == "__main__":
 #     main()

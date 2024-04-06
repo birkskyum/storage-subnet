@@ -38,7 +38,7 @@ METAGRAPH_ATTRIBUTES = [
 
 def get_database() -> StrictRedis:
     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-    return StrictRedis.from_url(redis_url) if redis_db == None else redis_db
+    return StrictRedis.from_url(redis_url, db=os.getenv("REDIS_DB", 2)) if redis_db == None else redis_db
 
 def startup():
     global redis_db
@@ -98,14 +98,53 @@ def create_user(user: UserInDB):
     username = user.username
     user_str = serialize_model(user)
     redis_db.set(username, user_str)
+    user_count = redis_db.incr("service:userCount")
 
-def store_file_metadata(filename: str, cid: str, hotkeys: List[str], payload: dict):
-    redis_db.set(filename, json.dumps({"cid": cid, "hotkeys": hotkeys, "encryption_payload": payload}))
+def store_file_metadata(
+    username: str, filename: str, cid: str, hotkeys: List[str], payload: dict, ext: str, size: int = 0
+):
+    redis_db.hset(
+        "metadata:" + username,
+        cid,
+        json.dumps(
+            {
+                "filename": filename,
+                "hotkeys": hotkeys,
+                "encryption_payload": payload,
+                "ext": ext,
+                "size": size,
+                "uploaded": str(datetime.today()), # datetime.today().ctime(),
+            }
+        )
+    )
+    if redis_db.get("filecount:" + username) is None:
+        redis_db.set("filecount:" + username, 0)
+    redis_db.incr("filecount:" + username)
+    redis_db.incr("service:totalFiles")
+
+# Files should be retrieved by CID, and not by filename (which is not unique)
+def get_cid_metadata(cid: str, username: str) -> Optional[dict]:
+    md = redis_db.hget("metadata:" + username, cid)
+    if md is None:
+        return None
+    return json.loads(md)
+
+# Retrieve the cid for a user by filename
+def get_filecid_by_user(username: str, filename: str) -> List[str]:
+    cids = redis_db.hkeys("metadata:" + username)
+    for cid in cids:
+        md = get_cid_metadata(cid, username)
+        if md.get("filename", "") == filename:
+            return cid
 
 def get_file_metadata(filename: str) -> Optional[dict]:
-    if redis_db.get(filename) is None:
+    md = redis_db.get(filename)
+    if md is None:
         return None
-    return json.loads(redis_db.get(filename))
+    return json.loads(md)
+
+def get_user_metadata(username: str) -> Optional[str]:
+    return redis_db.hgetall("metadata:" + username)
 
 def get_metagraph(netuid: int = 22, network: str = "test") -> bt.metagraph:
     metagraph_str = redis_db.get(f"metagraph:{netuid}")
