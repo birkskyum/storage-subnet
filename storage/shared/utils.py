@@ -175,10 +175,10 @@ def list_all_hashes(hash_file):
         return {}
 
 
-def get_coldkey_wallets_for_path(path: str) -> List["bittensor.wallet"]:
+def get_coldkey_wallets_for_path(path: str) -> List["bt.wallet"]:
     try:
         wallet_names = next(os.walk(os.path.expanduser(path)))[1]
-        return [bittensor.wallet(path=path, name=name) for name in wallet_names]
+        return [bt.wallet(path=path, name=name) for name in wallet_names]
     except StopIteration:
         # No wallet files found.
         wallets = []
