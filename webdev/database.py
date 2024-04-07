@@ -33,9 +33,16 @@ METAGRAPH_ATTRIBUTES = [
     "uids"
 ]
 
+# def get_database() -> StrictRedis:
+#     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+#     return StrictRedis.from_url(redis_url, db=os.getenv("REDIS_DB", 2)) if redis_db == None else redis_db
+
+
 def get_database() -> StrictRedis:
     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-    return StrictRedis.from_url(redis_url, db=os.getenv("REDIS_DB", 2)) if redis_db == None else redis_db
+    redis_password = os.getenv('REDIS_PASSWORD')  # Retrieve password from environment
+    # Include the password in the connection
+    return StrictRedis.from_url(redis_url, password=redis_password) if redis_db is None else redis_db
 
 def startup():
     global redis_db

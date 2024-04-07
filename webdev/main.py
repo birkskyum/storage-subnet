@@ -99,12 +99,15 @@ async def register_user(user_info: UserInfo):
     user_wallet = bt.wallet(name=username)
     user_wallet.create(coldkey_use_password=False, hotkey_use_password=False)
 
+    print(user_wallet)
+
     # Hash the password and generate a seed for the user
     hashed_password = get_password_hash(password)
     seed = generate_seed()
     name = user_wallet.name
     hotkey = user_wallet.hotkey.ss58_address
     mnemonic = user_wallet.coldkey.mnemonic
+
     if mnemonic is None:
         raise HTTPException(status_code=500, detail="Mnemonic not generated")
 
