@@ -50,19 +50,29 @@ def upload_multiple_files(base_url, token: str, files_content: List[Tuple[str, s
     response = requests.post(f"{base_url}/uploadfiles/", files=files, headers=headers)
     return response.json()
 
-def retrieve_user_data(base_url, token: str, file_hash: str):
+def get_user_statistics(base_url: str, token: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"{base_url}/retrieve/{file_hash}", headers=headers)
+    response = requests.get(f"{base_url}/user_stats", headers=headers)
     if response.headers.get('Content-Type') == 'application/json':
         # Handle JSON response
         return response.json()
-    else:
+    return response.content.decode()
+
+def retrieve_user_data(base_url: str, token: str, filename: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(f"{base_url}/retrieve/{filename}", headers=headers)
+    if response.headers.get('Content-Type') == 'application/json':
+        # Handle JSON response
+        return response.json()
+    elif response.status_code == 200:
         # Handle file response, save to a file, or process as needed
         file_content = response.content
         # Example: save to a local file
-        with open(file_hash, 'wb') as f:
+        with open(filename, 'wb') as f:
             f.write(file_content)
         return {"success": True, "message": "File downloaded successfully."}
+    else:
+        return {"success": False, "message": f"Failed to retrieve file with error: {response.content.decode()}"}
 
 # Add some fake users to the database
 def test_create_fake_users():
@@ -96,9 +106,13 @@ def test_create_fake_users():
     user = get_user("johndoe")
     assert user == fake_user_john, "User doesn't match expected"
 
-def get_user_metadata(base_url, token: str, username: str):
+def get_user_metadata(base_url, token: str):
     headers = {"Authorization": f"Bearer {token}"}
-    return requests.get(f"{base_url}/user_data/{username}", headers=headers).json()
+    return requests.get(f"{base_url}/user_data", headers=headers).json()
+
+def get_hotkeys_by_cid(base_url, token: str, cid: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    return requests.get(f"{base_url}/hotkeys/{cid}", headers=headers).json()
 
 
 def main():
@@ -111,7 +125,7 @@ def main():
 
     username = "janedoe"
     password = "password123"
-    file_content = "This is a test string, bitches2"
+    file_content = "This is a test string."
 
     print("Registering user...")
     register_response = register_user(base_url, username, password)
@@ -122,16 +136,26 @@ def main():
     print("Access Token:", token)
 
     print("Uploading file...")
-    cid, hotkeys = upload_file(base_url, token, file_content)
-    print(cid, hotkeys)
+    resp = upload_file(base_url, token, file_content)
+    if len(resp) > 1:
+        cid, hotkeys = resp
+        print(cid, hotkeys)
+    else:
+        print(resp)
 
     print("Retrieving file...")
-    retrieved_data = retrieve_user_data(base_url, token, 'test.txt')
-    print(retrieved_data)
+    response = retrieve_user_data(base_url, token, 'test.txt')
+    print(response)
 
     print("Getting user metadata...")
-    user_metadata = get_user_metadata(base_url, token, username)
+    user_metadata = get_user_metadata(base_url, token)
     print("User Metadata:", user_metadata)
 
-# if __name__ == "__main__":
-#     main()
+    print("Get hotkeys by CID...")
+    hotkeys = get_hotkeys_by_cid(base_url, token, cid)
+    print("Hotkeys:", hotkeys)
+
+    # TODO: add tests for adding multiple files per user and checking the storage/size is correct
+
+if __name__ == "__main__":
+    main()

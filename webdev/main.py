@@ -15,8 +15,9 @@ from typing import List, Optional, Dict
 from storage.validator.encryption import encrypt_data, decrypt_data_with_private_key
 from storage.api import StoreUserAPI, RetrieveUserAPI, get_query_api_axons, store, retrieve
 from webdev.database import startup, get_database, get_user, create_user, get_server_wallet, get_metagraph
-from webdev.database import Token, TokenData, User, UserInDB, store_file_metadata, get_file_metadata
-from webdev.database import get_user_metadata
+from webdev.database import Token, TokenData, User, UserInDB, store_file_metadata, get_user_metadata
+from webdev.database import file_exists, get_cid_by_filename, get_cid_metadata, get_user_stats, get_hotkeys_by_cid
+
 
 os.environ['ACCESS_TOKEN_EXPIRE_MINUTES']='15'
 os.environ['ALGORITHM']='HS256'
@@ -134,6 +135,62 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 # File Upload Endpoint
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+
+    # Access wallet_name and wallet_hotkey from current_user
+    wallet_name = current_user.wallet_name
+    wallet_hotkey = current_user.wallet_hotkey
+    user_wallet = bt.wallet(name = wallet_name, hotkey = wallet_hotkey)
+
+    # Fetch the axons of the available API nodes, or specify UIDs directly
+    axons = await get_query_api_axons(wallet=server_wallet, metagraph=metagraph)
+
+    # Check for existence before reuploading
+    splt = file.filename.split(os.path.extsep)
+    filename_no_ext = splt[0]
+
+    # If exists, don't attempt to overwrite on the network.
+    if file_exists(current_user.username, filename=filename_no_ext):
+        cid = get_cid_by_filename(filename_no_ext, current_user.username)
+        hotkeys = get_hotkeys_by_cid(cid, current_user.username)
+        return cid, hotkeys
+
+    raw_data = await file.read()
+
+    # Encrypt the data with the user_wallet, and send with the server_wallet
+    if False:
+        encrypted_data, encryption_payload = encrypt_data(raw_data, user_wallet)
+    else:
+        # Don't encrypt for testing right now
+        encrypted_data, encryption_payload = raw_data, {}
+
+    cid, hotkeys = await store_handler(
+        axons=axons,
+        data=encrypted_data,
+        encrypt=False, # We already encrypted the data (and don't want to double encrypt it)
+        ttl=60 * 60 * 24 * 180, # 6 months
+        encoding="utf-8",
+        timeout=60,
+    )
+    if not len(hotkeys):
+        raise HTTPException(status_code=500, detail="No hotkeys returned from store_handler. Data not stored.")
+
+    # Store the encrpyiton payload in the user db for later retrieval
+    ext = splt[-1] if len(splt) > 1 else ""
+    store_file_metadata(
+        username=current_user.username,
+        filename=filename_no_ext,
+        cid=cid,
+        hotkeys=hotkeys,
+        payload=encryption_payload,
+        ext=ext,
+        size=sys.getsizeof(encrypted_data),
+    )
+
+    return cid, hotkeys
+
+# Multiple files upload endpoint
 @app.post("/uploadfiles/")
 async def create_upload_files(files: List[UploadFile] = File(...), current_user: User = Depends(get_current_user)):
 
@@ -147,6 +204,17 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
 
     # TODO: This should be non-blocking. Either in separate threads or asyncio tasks we await.
     for file in files:
+        # TODO: Make this a separate function that can use asyncio.to_thread() or asyncio.create_task()
+        # Check for existence before reuploading
+        splt = file.filename.split(os.path.extsep)
+        filename_no_ext = splt[0]
+
+        if file_exists(current_user.username, filename=filename_no_ext):
+            cid = get_cid_by_filename(filename_no_ext, current_user.username)
+            hotkeys = get_hotkeys_by_cid(cid, current_user.username)
+            continue
+            # raise HTTPException(status_code=400, detail="File already exists")
+
         raw_data = await file.read()
 
         # Encrypt the data with the user_wallet, and send with the server_wallet
@@ -168,8 +236,6 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
             raise HTTPException(status_code=500, detail="No hotkeys returned from store_handler. Data not stored.")
 
         # Store the encrpyiton payload in the user db for later retrieval
-        splt = file.filename.split(os.path.extsep)
-        filename_no_ext = splt[0]
         ext = splt[-1] if len(splt) > 1 else ""
         store_file_metadata(
             username=current_user.username,
@@ -187,12 +253,20 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
 @app.get("/retrieve/{filename}")
 async def retrieve_user_data(filename: str, current_user: User = Depends(get_current_user)):
 
+    splt = filename.split(os.path.extsep)
+    filename_no_ext = splt[0]
+
+    if not file_exists(current_user.username, filename=filename_no_ext):
+        raise HTTPException(
+            status_code=404, detail=f"File {filename} does not exist. Please check the filename."
+        )
+
     # Access wallet_name and wallet_hotkey from current_user
     wallet_name = current_user.wallet_name
     wallet_hotkey = current_user.wallet_hotkey
     user_wallet = bt.wallet(name = wallet_name, hotkey = wallet_hotkey)
 
-    cid = get_cid_by_filename(filename, current_user.username)
+    cid = get_cid_by_filename(filename_no_ext, current_user.username)
     metadata = get_cid_metadata(cid, current_user.username)
     hotkeys = metadata.get("hotkeys")
 
@@ -231,9 +305,13 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
         raise HTTPException(status_code=500, detail=str(e))
 
 # Perhaps this doesn't need username if we can parse it from the `User` object?
-@app.get("/user_data/{username}")
-async def get_user_data(username: str, current_user: User = Depends(get_current_user)):
-    user = get_user(username)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return get_user_metadata(username)
+@app.get("/user_data")
+async def get_user_data(current_user: User = Depends(get_current_user)):
+    return {
+        "file_metadata": get_user_metadata(current_user.username),
+        "stats": get_user_stats(current_user.username),
+    }
+
+@app.get("/hotkeys/{cid}")
+async def get_hotkeys(cid: str, current_user: User = Depends(get_current_user)):
+    return get_hotkeys_by_cid(cid, current_user.username)

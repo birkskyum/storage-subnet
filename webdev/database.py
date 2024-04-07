@@ -11,10 +11,7 @@ from typing import Optional, Union, List
 
 redis_db = None
 
-#os.environ["REDIS_URL"] = "localhost"
-#os.environ["REDIS_HOST"] = "localhost"
 os.environ["REDIS_DB"] = "2"
-# os.environ["REDIS_PORT"] = "6379"
 
 METAGRAPH_ATTRIBUTES = [
     "n",
@@ -43,7 +40,7 @@ def get_database() -> StrictRedis:
 def startup():
     global redis_db
     redis_db = get_database()
-    if redis_db.get("service:has_launched") == None:
+    if redis_db.get("service:has_launched") is None:
         redis_db.set("service:service", "UserDatabase")
         redis_db.set("service:userCount", "0")
         redis_db.set("service:totalFiles", "0")
@@ -89,7 +86,7 @@ def deserialize_model(model_str: str, model_class: type) -> BaseModel:
     return model_class.parse_raw(model_str)
 
 def get_user(username: str) -> Optional[UserInDB]:
-    user_str = redis_db.get(username)
+    user_str = redis_db.get("user:" + username)
     if user_str:
         return deserialize_model(user_str, UserInDB)
     return None
@@ -97,8 +94,23 @@ def get_user(username: str) -> Optional[UserInDB]:
 def create_user(user: UserInDB):
     username = user.username
     user_str = serialize_model(user)
-    redis_db.set(username, user_str)
-    user_count = redis_db.incr("service:userCount")
+    redis_db.set("user:" + username, user_str)
+    redis_db.set("storage:" + username, 0)
+    redis_db.set("usercap:" + username, 1024 ** 4) # 1 GB init capacity
+    redis_db.incr("service:userCount")
+
+def get_server_stats():
+    return {
+        "userCount": int(redis_db.get("service:userCount")),
+        "totalFiles": int(redis_db.get("service:totalFiles")),
+        "started": redis_db.get("service:started").decode(),
+    }
+
+def get_user_stats(username: str):
+    return {
+        "filecount": int(redis_db.get("filecount:" + username)),
+        "storage": int(redis_db.get("storage:" + username)),
+    }
 
 def store_file_metadata(
     username: str, filename: str, cid: str, hotkeys: List[str], payload: dict, ext: str, size: int = 0
@@ -119,7 +131,8 @@ def store_file_metadata(
     )
     if redis_db.get("filecount:" + username) is None:
         redis_db.set("filecount:" + username, 0)
-    redis_db.incr("filecount:" + username)
+    redis_db.incr("filecount:" + username, 1)
+    redis_db.incr("storage:" + username, size)
     redis_db.incr("service:totalFiles")
 
 # Files should be retrieved by CID, and not by filename (which is not unique)
@@ -129,22 +142,35 @@ def get_cid_metadata(cid: str, username: str) -> Optional[dict]:
         return None
     return json.loads(md)
 
-# Retrieve the cid for a user by filename
-def get_filecid_by_user(username: str, filename: str) -> List[str]:
+def file_exists(username: str, filename: str = None, cid: str = None) -> bool:
+    """"Check if a file already exists in the user's storage"""
+    if cid is not None:
+        return redis_db.hget("metadata:" + username, cid) is not None
+
+    if filename is None:
+       return False
+
+    cids = redis_db.hkeys("metadata:" + username)
+    for cid in cids:
+        md = get_cid_metadata(cid, username)
+        if md.get("filename", "") == filename:
+            return True
+    return False
+
+def get_cid_by_filename(filename: str, username: str) -> List[str]:
+    """Retrieve the cid for a user by filename"""
     cids = redis_db.hkeys("metadata:" + username)
     for cid in cids:
         md = get_cid_metadata(cid, username)
         if md.get("filename", "") == filename:
             return cid
 
-def get_file_metadata(filename: str) -> Optional[dict]:
-    md = redis_db.get(filename)
-    if md is None:
-        return None
-    return json.loads(md)
-
 def get_user_metadata(username: str) -> Optional[str]:
     return redis_db.hgetall("metadata:" + username)
+
+def get_hotkeys_by_cid(cid: str, username: str) -> List[str]:
+    md = get_cid_metadata(cid, username)
+    return md.get("hotkeys", [])
 
 def get_metagraph(netuid: int = 22, network: str = "test") -> bt.metagraph:
     metagraph_str = redis_db.get(f"metagraph:{netuid}")
@@ -175,7 +201,7 @@ def serialize_metagraph(metagraph_obj: bt.metagraph, dump=False) -> Union[str, d
 
     return json.dumps(serialized_data) if dump else serialized_data
 
-def deserialize_metagraph(serialized_str):
+def deserialize_metagraph(serialized_str) -> bt.metagraph:
     if isinstance(serialized_str, str):
         data = json.loads(serialized_str)
     else:
