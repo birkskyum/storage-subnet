@@ -27,12 +27,13 @@ from typing import Any, List, Union
 from storage.protocol import StoreUser
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import encrypt_data
+from storage.api.base import Subnet21API
 from storage.api.utils import get_query_api_axons
 from storage.cli.default_values import defaults
 from storage.shared.utils import get_coldkey_wallets_for_path, get_hash_mapping, save_hash_mapping
 
 
-class StoreUserAPI(bt.SubnetsAPI):
+class StoreUserAPI(Subnet21API):
     def __init__(self, wallet: "bt.wallet"):
         super().__init__(wallet)
         self.netuid = 21
@@ -136,7 +137,7 @@ async def store(
         uids = [uid]
 
     all_axons = await get_query_api_axons(wallet=wallet, metagraph=metagraph, uids=uids)
-    axons = random.choices(all_axons, k=3)
+    axons = random.choices(all_axons, k=min(3, len(all_axons)))
 
     cid, hotkeys = await store_handler(
         axons=axons,
