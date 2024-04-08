@@ -13,7 +13,6 @@ x-filetao: &filetao
         condition: service_healthy
     volumes:
       - ${BT_WALLETS_BASE_PATH}:/root/.bittensor/wallets
-      - ${REDIS_CONF}:/etc/redis/redis.conf
       - ./scripts:/install/scripts
     env_file:
       - .env
@@ -24,8 +23,6 @@ services:
     <<: *filetao
     volumes:
       - ${BT_WALLETS_BASE_PATH}:/root/.bittensor/wallets
-      - ${REDIS_CONF}:/etc/redis/redis.conf
-      - ./scripts:/install/scripts
       - ${FILETAO_MINER_DATA_DIR}:/root/.data/
     environment:
       - FILETAO_NODE=miner
@@ -73,4 +70,3 @@ services:
       - "${REDIS_HOST:-127.0.0.1}:${REDIS_PORT}:6379"
     volumes:
       - redis-prod-data:/data
-      - ${REDIS_CONF}:/etc/redis/redis.conf
