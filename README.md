@@ -1224,25 +1224,7 @@ You are free to use this provided docker convenience but may still run nodes on 
 
 ### Run filetao with docker
 
- - To run the defined docker compose services {filetao-miner, filetao-validator, redis} you will need the followings environment variables:
-     - `WANDB_API_KEY`: Your wandb API key.
-     - `BT_WALLETS_BASE_PATH`: The base path of your bittensor wallets. Typically equivalent to `$HOME/.bittensor/wallets`.
-     - `REDIS_PASSWORD`: Your redis instance password.
-     - `REDIS_HOST`: optional, default is 127.0.0.1, IP to which redis should be attached.
-     - `REDIS_PORT`: Port to run redis within a docker container (same port is exposed)
-     - `FILETAO_WALLET`: Bittensor wallet name to use.
-     - `FILETAO_HOTKEY`: Bittensor hotkey name to use.
-     - `FILETAO_NETUID`: optional, default is 21, Net UID of the bittensor subnet to connect.
-     - `FILETAO_SUBTENSOR`: Subtensor network to connect.
-     - `FILETAO_IP`: optional, default is 0.0.0.0 (any), IP to be used by the neuron's container.
-     - `FILETAO_EXTERNAL_PORT`: Port to be used externally (in the host) by the neuron's container.
-     - `FILETAO_API_EXTERNAL_PORT`: Port to be used externally (in the host) by the api neuron's container
-     - `FILETAO_MINER_DATA_DIR`: Host data directory to be mapped to the neuron's container (used in the miner neuron)
-     - `FILETAO_EXTRA_OPTIONS`: Extra options to be added, not specified in the rest of the ENVVARs, like `--wandb.off` or `--logging.debug`.
- - Since some of env vars could be shared between containers, if you run validator or miner or the api in the same host, we recommend you to have multiple environment files:
-     - `.env` for common env vars
-     - optional `filetao-{miner,validator,api}.env` for specific env vars for each service
- - Once you have the needed env files, you can run the docker compose containers defined. If you have followed the suggested steps, you can use the following commands:
-     - Running miner: `sudo docker compose --env-file filetao-miner.env up --build filetao-miner`
-     - Running validator: `sudo docker compose --env-file filetao-validator.env up --build filetao-validator`
-     - Running api: `sudo docker compose --env-file filetao-api.env  up --build filetao-api`
+ - To run the defined docker compose services {filetao-miner, filetao-validator, redis} you must define environment variables in a `.env` file. To get you started `cp example.env .env` and update the `.env` file with your own values.
+ - Once you have the needed env file, you can run the docker compose containers defined. If you have followed the suggested steps, you can use the following commands:
+     - To run all services (miner, validator, api) on a single host: `sudo docker compose up --build`
+     - To run a single or more services of choices `sudo docker compose up --build {filetao-miner,filetao-validator,filetao-api}` (remove the ones you don't want to run from the command)

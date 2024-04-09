@@ -35,15 +35,4 @@ ENV LD_LIBRARY_PATH="/opt/filetao/lib:${LD_LIBRARY_PATH}"
 ENV REBALANCE_SCRIPT_PATH=/opt/filetao/scripts/rebalance_deregistration.sh
 ENV PYTHONPATH="/opt/filetao/lib/python/site-packages/:${PYTHONPATH}"
 
-CMD ["sh", "-c", "filetao run ${FILETAO_NODE} \
-    --wallet.name ${FILETAO_WALLET} \
-    --wallet.hotkey ${FILETAO_HOTKEY} \
-    --netuid ${FILETAO_NETUID:-21} \
-    $([ -n \"${FILETAO_IP}\" ] && echo \"--axon.ip ${FILETAO_IP}\") \
-    --axon.port ${FILETAO_EXTERNAL_PORT} \
-    --axon.external_port ${FILETAO_EXTERNAL_PORT} \
-    --subtensor.network ${FILETAO_SUBTENSOR} \
-    --database.host ${REDIS_HOST:-127.0.0.1} \
-    --database.port ${REDIS_PORT} \
-    --database.redis_password ${REDIS_PASSWORD} \
-    ${FILETAO_EXTRA_OPTIONS}"]
+ENTRYPOINT ["/opt/filetao/scripts/docker/entrypoint.sh"]
