@@ -56,6 +56,7 @@ from storage.validator.weights import (
 )
 from storage.validator.forward import forward
 from storage.validator.encryption import setup_encryption_wallet
+from storage.validator.dendrite import timed_dendrite
 
 load_dotenv()
 
@@ -184,7 +185,8 @@ class neuron:
         if self.config.neuron.mock_dendrite_pool:
             self.dendrite = MockDendrite()
         else:
-            self.dendrite = bt.dendrite(wallet=self.wallet)
+            self.dendrite = timed_dendrite(wallet=self.wallet)
+
         bt.logging.debug(str(self.dendrite))
 
         # Init the event loop.
