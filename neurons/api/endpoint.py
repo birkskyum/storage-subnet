@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from redis import asyncio as aioredis
 
 from storage.validator.database import *
-from sqlite import query
+from .sqlite import query
 
 redis, app, router = None, None, None
 

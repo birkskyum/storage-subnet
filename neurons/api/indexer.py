@@ -9,7 +9,7 @@ from storage.validator.bonding import *
 from storage.shared.utils import get_redis_password
 
 import endpoint
-from sqlite import query
+from .sqlite import query
 
 redis_db = None
 
