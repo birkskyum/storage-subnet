@@ -8,7 +8,7 @@ from storage.validator.database import *
 from storage.validator.bonding import *
 from storage.shared.utils import get_redis_password
 
-import .endpoint
+import indexer.endpoint as endpoint
 from .sqlite import query
 
 redis_db = None
