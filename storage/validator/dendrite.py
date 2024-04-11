@@ -58,10 +58,11 @@ class timed_dendrite(bt.dendrite):
                 json_response = await response.json()
 
                 # Set process time and log the response
-                synapse.dendrite.process_time = time.time() - start_time  # type: ignore
+                process_time = time.time() - start_time # type: ignore
 
                 # Process the server response and fill synapse
                 self.process_server_response(response, json_response, synapse)
+                synapse.dendrite.process_time = process_time
 
         except Exception as e:
             self._handle_request_errors(synapse, request_name, e)
