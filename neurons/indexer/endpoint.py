@@ -26,8 +26,7 @@ def get_redis():
     return redis
 
 class MinerStatItem(BaseModel):
-    DATE: str
-    DATETIME: str
+    TIMESTAMP: str
     HOTKEY: str
     TIER: str
     CURRENT_STORAGE: int
@@ -47,33 +46,40 @@ MINER_QUERY = """SELECT * FROM HotkeysTable WHERE timestamp BETWEEN datetime(?, 
 @app.get("/miner_statistics", response_model=List[MinerStatItem])
 async def get_miner_statistics_endpoint(start_time: int = 0, end_time: int = 0, limit: int = 50):
     miner_data = query(MINER_QUERY, [start_time, end_time, limit])
-    print(miner_data)
-
-    database = get_redis()
-    stats = await get_miner_statistics(database)
-    hotkeys = list(stats)
-    caps = await cache_hotkeys_capacity(hotkeys, database)
     data_rows = []
 
-    for hotkey, stat in stats.items():
-        cur, cap = caps[hotkey]
-        n_hashes = len(await get_hashes_for_hotkey(hotkey, database))
+    for (
+        id,
+        timestamp,
+        hotkey,
+        tier,
+        current_storage,
+        capacity,
+        percent_usage,
+        num_hashes,
+        total_successes,
+        store_successes,
+        store_attempts,
+        challenge_successes,
+        challenge_attempts,
+        retrieve_successes,
+        retrieve_attempts
+    ) in miner_data:
         row = MinerStatItem(
-            DATE=str(datetime.date.today()),
-            DATETIME=str(datetime.datetime.utcfromtimestamp(int(time.time())))[:-3],
+            TIMESTAMP=timestamp,
             HOTKEY=hotkey,
-            TIER=stat['tier'],
-            CURRENT_STORAGE=cur,
-            CAPACITY=cap,
-            PERCENT_USAGE=cur / cap if cap else 0,
-            NUM_HASHES=n_hashes,
-            TOTAL_SUCCESSES=stat.get('total_successes',0),
-            STORE_SUCCESSES=stat.get('store_successes',0),
-            STORE_ATTEMPTS=stat.get('store_attempts',0),
-            CHALLENGE_SUCCESSES=stat.get('challenge_successes',0),
-            CHALLENGE_ATTEMPTS=stat.get('challenge_attempts',0),
-            RETRIEVE_SUCCESSES=stat.get('retrieve_successes',0),
-            RETRIEVE_ATTEMPTS=stat.get('retrieve_attempts',0),
+            TIER=tier,
+            CURRENT_STORAGE=current_storage,
+            CAPACITY=capacity,
+            PERCENT_USAGE=percent_usage,
+            NUM_HASHES=num_hashes,
+            TOTAL_SUCCESSES=total_successes,
+            STORE_SUCCESSES=store_successes,
+            STORE_ATTEMPTS=store_attempts,
+            CHALLENGE_SUCCESSES=challenge_successes,
+            CHALLENGE_ATTEMPTS=challenge_attempts,
+            RETRIEVE_SUCCESSES=retrieve_successes,
+            RETRIEVE_ATTEMPTS=retrieve_attempts,
         )
         data_rows.append(row.dict())
 
@@ -81,8 +87,7 @@ async def get_miner_statistics_endpoint(start_time: int = 0, end_time: int = 0, 
 
 
 class TierStatItem(BaseModel):
-    DATE: str
-    DATETIME: str
+    TIMESTAMP: str
     TIER: str
     COUNTS: int
     CAPACITY: int
@@ -93,93 +98,83 @@ class TierStatItem(BaseModel):
     GLOBAL_SUCCESS_RATE: float
     TOTAL_GLOBAL_SUCCESSES: int
 
+TIERS_QUERY = """SELECT * FROM TierStatsTable WHERE timestamp BETWEEN datetime(?, 'unixepoch') AND datetime(?, 'unixepoch') LIMIT ?"""
 
 @app.get("/tiers_data", response_model=List[TierStatItem])
-async def get_tiers_data_endpoint():
-    database = get_redis()
-    tstats = await tier_statistics(database)
-    
-    istats = {}
-    for category, tier_dict in tstats.items():
-        for tier, value in tier_dict.items():
-            if tier not in istats:
-                istats[tier] = {}
-            istats[tier][category] = value
-
-    by_tier = await compute_by_tier_stats(database)
-
+async def get_tiers_data_endpoint(start_time: int = 0, end_time: int = 0, limit: int = 50):
+    tiers_data = query(TIERS_QUERY, [start_time, end_time, limit])
     data_rows = []
-    for tier, stat in istats.items():
+
+    for (
+        id,
+        timestamp,
+        tier,
+        counts,
+        capacity,
+        current_storage,
+        percent_usage,
+        current_attempts,
+        current_successes,
+        global_success_rate,
+        total_global_successes
+    ) in tiers_data:
         row = TierStatItem(
-            DATE=str(datetime.date.today()),
-            DATETIME=str(datetime.datetime.utcfromtimestamp(int(time.time())))[:-3],
+            TIMESTAMP=timestamp,
             TIER=tier,
-            COUNTS=stat.get('counts', 0),
-            CAPACITY=stat.get('capacity', 0),
-            CURRENT_STORAGE=stat.get('current_storage', 0),
-            PERCENT_USAGE=stat.get('percent_usage', 0.0),
-            CURRENT_ATTEMPTS=by_tier[tier]['total_current_attempts'] if tier in by_tier else 0,
-            CURRENT_SUCCESSES=by_tier[tier]['total_current_successes'] if tier in by_tier else 0,
-            GLOBAL_SUCCESS_RATE=by_tier[tier]['success_rate'] if tier in by_tier else 0.0,
-            TOTAL_GLOBAL_SUCCESSES=by_tier[tier]['total_global_successes'] if tier in by_tier else 0,
+            COUNTS=counts,
+            CAPACITY=capacity,
+            CURRENT_STORAGE=current_storage,
+            PERCENT_USAGE=percent_usage,
+            CURRENT_ATTEMPTS=current_attempts,
+            CURRENT_SUCCESSES=current_successes,
+            GLOBAL_SUCCESS_RATE=global_success_rate,
+            TOTAL_GLOBAL_SUCCESSES=total_global_successes
         )
         data_rows.append(row.dict())
 
     return data_rows
 
-
-
 class NetworkDataItem(BaseModel):
-    DATE: str
-    DATETIME: str
+    TIMESTAMP: str
     CURRENT_STORAGE: int
     NETWORK_CAPACITY: int
     TOTAL_SUCCESSFUL_REQUESTS: int
-    REDIS_INDEX_SIZE_BYTES: int
+    REDIS_INDEX_SIZE_MB: int
     GLOBAL_CURRENT_ATTEMPTS: int
     GLOBAL_CURRENT_SUCCESSES: int
     GLOBAL_CURRENT_SUCCESS_RATE: float
 
-@app.get("/network_data", response_model=NetworkDataItem)
-async def get_network_data_endpoint():
-    database = get_redis()
-    net_cap = await get_network_capacity(database)
-    idx_size = await get_redis_db_size(database)
-    tot_suc = await total_successful_requests(database)
+NETWORK_QUERY = """SELECT * FROM NetworkStatsTable WHERE timestamp BETWEEN datetime(?, 'unixepoch') AND datetime(?, 'unixepoch') LIMIT ?"""
 
-    hotkeys = await active_hotkeys(database)
-    caps = await cache_hotkeys_capacity(hotkeys, database)
-    cur_storage = sum(c[0] for c in caps.values())
+@app.get("/network_data", response_model=List[NetworkDataItem])
+async def get_network_data_endpoint(start_time: int = 0, end_time: int = 0, limit: int = 50):
+    network_data = query(NETWORK_QUERY, [start_time, end_time, limit])
+    data_rows = []
 
-    global_stats = {
-        'store_attempts': 0,
-        'store_successes': 0,
-        'challenge_attempts': 0,
-        'challenge_successes': 0,
-        'retrieve_attempts': 0,
-        'retrieve_successes': 0,
-    }
+    for (
+        id,
+        timestamp,
+        current_storage,
+        network_capacity,
+        total_successful_requests,
+        redis_index_size_mb,
+        global_current_attempts,
+        global_current_successes,
+        global_current_success_rate
+    ) in network_data:
+        row = NetworkDataItem(
+            TIMESTAMP=timestamp,
+            CURRENT_STORAGE=current_storage,
+            NETWORK_CAPACITY=network_capacity,
+            TOTAL_SUCCESSFUL_REQUESTS=total_successful_requests,
+            REDIS_INDEX_SIZE_MB=redis_index_size_mb,
+            GLOBAL_CURRENT_ATTEMPTS=global_current_attempts,
+            GLOBAL_CURRENT_SUCCESSES=global_current_successes,
+            GLOBAL_CURRENT_SUCCESS_RATE=global_current_success_rate
+        )
+        data_rows.append(row.dict())
 
-    for _, d in (await get_miner_statistics(database)).items():
-        for key in global_stats.keys():
-            global_stats[key] += int(d[key])
-
-    global_attempts = global_stats['store_attempts'] + global_stats['challenge_attempts'] + global_stats['retrieve_attempts']
-    global_successes = global_stats['store_successes'] + global_stats['challenge_successes'] + global_stats['retrieve_successes']
-
-    data_row = NetworkDataItem(
-        DATE=str(datetime.date.today()),
-        DATETIME=str(datetime.datetime.utcfromtimestamp(int(time.time())))[:-3],
-        CURRENT_STORAGE=cur_storage,
-        NETWORK_CAPACITY=net_cap,
-        TOTAL_SUCCESSFUL_REQUESTS=tot_suc,
-        REDIS_INDEX_SIZE_BYTES=idx_size,
-        GLOBAL_CURRENT_ATTEMPTS=global_attempts,
-        GLOBAL_CURRENT_SUCCESSES=global_successes,
-        GLOBAL_CURRENT_SUCCESS_RATE=(global_successes / global_attempts) if global_attempts else 0
-    )
-
-    return data_row
+    return data_rows
 
 def startup():
     uvicorn.run(app, host="0.0.0.0", port=8000, server_header=False)

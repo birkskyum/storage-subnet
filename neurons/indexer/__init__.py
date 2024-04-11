@@ -159,6 +159,8 @@ def run():
     print("Starting up indexer...")
     create_tables()
 
+    sleep(30)
+
     print("Beginning infinite loop...")
     while True:
         print("Collecting and inserting data...")
