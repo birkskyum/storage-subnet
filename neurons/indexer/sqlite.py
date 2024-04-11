@@ -7,7 +7,7 @@ sqlite = None
 def get_sqlite():
     global sqlite
     if not sqlite:
-        sqlite = sqlite3.connect("network_data.db")
+        sqlite = sqlite3.connect("network_data.db", check_same_thread=False)
     return sqlite
 
 def query(query, params):
