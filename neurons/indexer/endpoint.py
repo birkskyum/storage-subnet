@@ -2,7 +2,7 @@ import pandas as pd
 import datetime
 import time
 import threading
-import sqlite3
+import uvicorn
 
 from fastapi import APIRouter
 from typing import List, Dict
@@ -11,14 +11,18 @@ from fastapi import FastAPI
 from redis import asyncio as aioredis
 
 from storage.validator.database import *
+from storage.shared.utils import get_redis_password
 from .sqlite import query
 
-redis, app, router = None, None, None
+app = FastAPI()
+router = APIRouter()
+
+redis = None
 
 def get_redis():
     global redis
     if not redis:
-        redis = aioredis.Redis(db=1)
+        redis = aioredis.Redis(db=13, password=get_redis_password())
     return redis
 
 class MinerStatItem(BaseModel):
@@ -38,29 +42,14 @@ class MinerStatItem(BaseModel):
     RETRIEVE_SUCCESSES: int
     RETRIEVE_ATTEMPTS: int
 
-MINER_QUERY = """
-SELECT (
-    timestamp,
-    hotkey,
-    tier,
-    current_storage,
-    capacity,
-    percent_usage,
-    num_hashes,
-    total_successes,
-    store_successes,
-    store_attempts,
-    challenge_successes,
-    challenge_attempts,
-    retrieve_successes,
-    retrieve_attempts
-) FROM HotkeysTable WHERE timestamp BETWEEN datetime(?, 'unixepoch') AND datetime(?, 'unixepoch') LIMIT ?
-"""
+MINER_QUERY = """SELECT * FROM HotkeysTable WHERE timestamp BETWEEN datetime(?, 'unixepoch') AND datetime(?, 'unixepoch') LIMIT ?"""
 
 @app.get("/miner_statistics", response_model=List[MinerStatItem])
 async def get_miner_statistics_endpoint(start_time: int = 0, end_time: int = 0, limit: int = 50):
     miner_data = query(MINER_QUERY, [start_time, end_time, limit])
+    print(miner_data)
 
+    database = get_redis()
     stats = await get_miner_statistics(database)
     hotkeys = list(stats)
     caps = await cache_hotkeys_capacity(hotkeys, database)
@@ -107,6 +96,7 @@ class TierStatItem(BaseModel):
 
 @app.get("/tiers_data", response_model=List[TierStatItem])
 async def get_tiers_data_endpoint():
+    database = get_redis()
     tstats = await tier_statistics(database)
     
     istats = {}
@@ -152,6 +142,7 @@ class NetworkDataItem(BaseModel):
 
 @app.get("/network_data", response_model=NetworkDataItem)
 async def get_network_data_endpoint():
+    database = get_redis()
     net_cap = await get_network_capacity(database)
     idx_size = await get_redis_db_size(database)
     tot_suc = await total_successful_requests(database)
@@ -191,10 +182,7 @@ async def get_network_data_endpoint():
     return data_row
 
 def startup():
-    global database, app, router
-    database = get_database()
-    app = FastAPI()
-    router = APIRouter()
+    uvicorn.run(app, host="0.0.0.0", port=8000, server_header=False)
 
 def run_in_thread():
     thread = threading.Thread(target=startup, daemon=True)

@@ -41,7 +41,7 @@ from storage.validator.database import retrieve_encryption_payload, get_ordered_
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import decrypt_data_with_private_key
 
-from .indexer import run_indexer_thread
+from indexer import run_indexer_thread
 
 
 def MockDendrite():
@@ -464,8 +464,8 @@ class neuron:
 
 
 def run_api():
-    neuron().run_in_background_thread()
     run_indexer_thread()
+    neuron().run()
 
 
 if __name__ == "__main__":

@@ -6,11 +6,11 @@ sqlite = None
 
 def get_sqlite():
     global sqlite
-    if not sqlite:
+    if not sqlite or sqlite:
         sqlite = sqlite3.connect("network_data.db")
     return sqlite
 
-def query(query, params: Optional[list]):
+def query(query, params):
     sqlite = get_sqlite()
     try:
         cursor = sqlite.cursor()
@@ -19,12 +19,6 @@ def query(query, params: Optional[list]):
         
         # Fetch the results
         results = cursor.fetchall()
-        
-        # If you want to print the results:
-        for row in results:
-            print(row)
-        
-        # Or if you prefer to return the results for further processing:
         return results
             
     except sqlite3.Error as e:
