@@ -10,20 +10,10 @@ from pydantic import BaseModel
 from fastapi import FastAPI
 from redis import asyncio as aioredis
 
-from storage.validator.database import *
-from storage.shared.utils import get_redis_password
 from .sqlite import query
 
 app = FastAPI()
 router = APIRouter()
-
-redis = None
-
-def get_redis():
-    global redis
-    if not redis:
-        redis = aioredis.Redis(db=13, password=get_redis_password())
-    return redis
 
 class MinerStatItem(BaseModel):
     TIMESTAMP: str
