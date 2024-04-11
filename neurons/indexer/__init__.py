@@ -1,28 +1,26 @@
 import threading
 import bittensor as bt
-from redis import asyncio as aioredis
 from time import sleep
-
-import storage
-from storage.validator.database import *
-from storage.validator.bonding import *
-from storage.shared.utils import get_redis_password
+import asyncio
 
 import indexer.endpoint as endpoint
 from .sqlite import query
-
-redis = None
-
-def get_redis():
-    global redis
-    if not redis:
-        redis = aioredis.Redis(db=13, password=get_redis_password())
-    return redis
+from .redis import (
+    get_miner_statistics,
+    cache_hotkeys_capacity,
+    get_hashes_for_hotkey,
+    tier_statistics,
+    compute_by_tier_stats,
+    get_network_capacity,
+    get_redis_db_size,
+    total_successful_requests,
+    active_hotkeys
+)
 
 def create_tables():
     query('''
         CREATE TABLE IF NOT EXISTS NetworkStatsTable (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id INTEGER PRIMARY KEY,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             current_storage BIGINT NOT NULL,
             network_capacity BIGINT NOT NULL,
@@ -36,7 +34,7 @@ def create_tables():
     
     query('''
         CREATE TABLE IF NOT EXISTS TierStatsTable (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id INTEGER PRIMARY KEY,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             tier VARCHAR(50) NOT NULL,
             counts INT NOT NULL,
@@ -52,7 +50,7 @@ def create_tables():
     
     query('''
         CREATE TABLE IF NOT EXISTS HotkeysTable (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id INTEGER PRIMARY KEY,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             hotkey VARCHAR(255) NOT NULL,
             tier VARCHAR(50) NOT NULL,
@@ -77,19 +75,18 @@ INSERT INTO HotkeysTable (
 """
 
 async def collect_and_insert_data():
-    redis_db = get_redis()
-
-    stats = await get_miner_statistics(redis_db)
+    stats = get_miner_statistics()
     hotkeys = list(stats)
-    caps = await cache_hotkeys_capacity(hotkeys, redis_db)
+    caps = cache_hotkeys_capacity(hotkeys)
 
     for hotkey, stat in stats.items():
         cur, cap = caps[hotkey]
-        n_hashes = len(await get_hashes_for_hotkey(hotkey, redis_db))
+        n_hashes = len(get_hashes_for_hotkey(hotkey))
         row = [hotkey, stat['tier'], cur, cap, cur / cap, n_hashes, stat['total_successes'], stat['store_successes'], stat['store_attempts'], stat['challenge_successes'], stat['challenge_attempts'], stat['retrieve_successes'], stat['retrieve_attempts']]
-        print(query(HOTKEY_INSERT, row))
+        print(f"Inserting row for hotkey statistics: {row}")
+        query(HOTKEY_INSERT, row)
 
-    tstats = await tier_statistics(redis_db)
+    tstats = tier_statistics()
 
     istats = {}
     for category, tier_dict in tstats.items():
@@ -98,8 +95,7 @@ async def collect_and_insert_data():
                 istats[tier] = {}
             istats[tier][category] = value
 
-    by_tier = await compute_by_tier_stats(redis_db)
-
+    by_tier = compute_by_tier_stats()
     for tier, stat in istats.items():
         print(tier, stat)
         row = [tier] + list(stat.values())
@@ -108,22 +104,20 @@ async def collect_and_insert_data():
             row += [tr['total_current_attempts'], tr['total_current_successes'], tr['success_rate'], tr['total_global_successes']]
         else:
             row += [0, 0, 0, 0]
-        print(row)
 
-    # Write the actual row to the table
-    sql_insert_command = """
-    INSERT INTO TierStatsTable (
-        TIER, COUNTS, CAPACITY, CURRENT_STORAGE, PERCENT_USAGE, CURRENT_ATTEMPTS, CURRENT_SUCCESSES, GLOBAL_SUCCESS_RATE, TOTAL_GLOBAL_SUCCESSES
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-    """
-    query(sql_insert_command, row)
+        # Write the actual row to the table
+        sql_insert_command = """
+        INSERT INTO TierStatsTable (
+            TIER, COUNTS, CAPACITY, CURRENT_STORAGE, PERCENT_USAGE, CURRENT_ATTEMPTS, CURRENT_SUCCESSES, GLOBAL_SUCCESS_RATE, TOTAL_GLOBAL_SUCCESSES
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """
+        query(sql_insert_command, row)
 
-    net_cap = await get_network_capacity(redis_db)
-    idx_size = await get_redis_db_size(redis_db)
-    tot_suc = await total_successful_requests(redis_db)
+    net_cap = get_network_capacity()
+    idx_size = get_redis_db_size()
+    tot_suc = total_successful_requests()
 
-    hotkeys = await active_hotkeys(redis_db)
-    caps = await cache_hotkeys_capacity(hotkeys, redis_db)
+    hotkeys = active_hotkeys()
     cur_storage = sum(list(zip(*list(caps.values())))[0])
 
     store_attempts = sa = 0
@@ -133,7 +127,7 @@ async def collect_and_insert_data():
     retrieve_attempts = ra = 0
     retrieve_successes = rs = 0
 
-    for _, d in (await get_miner_statistics(redis_db)).items():
+    for _, d in stats.items():
         tier = d['tier']
         sa += int(d['store_attempts'])
         ss += int(d['store_successes'])
@@ -156,7 +150,7 @@ async def collect_and_insert_data():
     sql_insert_command = """
     INSERT INTO NetworkStatsTable (
         CURRENT_STORAGE, NETWORK_CAPACITY, TOTAL_SUCCESSFUL_REQUESTS, REDIS_INDEX_SIZE_MB, GLOBAL_CURRENT_ATTEMPTS, GLOBAL_CURRENT_SUCCESSES, GLOBAL_CURRENT_SUCCESS_RATE
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s);
+    ) VALUES (?, ?, ?, ?, ?, ?, ?);
     """
 
     query(sql_insert_command, row)

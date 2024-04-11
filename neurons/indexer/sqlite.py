@@ -6,7 +6,7 @@ sqlite = None
 
 def get_sqlite():
     global sqlite
-    if not sqlite or sqlite:
+    if not sqlite:
         sqlite = sqlite3.connect("network_data.db")
     return sqlite
 
@@ -19,8 +19,9 @@ def query(query, params):
         
         # Fetch the results
         results = cursor.fetchall()
+        cursor.connection.commit()
+        cursor.close()
         return results
-            
     except sqlite3.Error as e:
         print(f"MySQL Error: {e}")
     except Exception as e:
