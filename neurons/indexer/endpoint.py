@@ -18,6 +18,7 @@ router = APIRouter()
 class MinerStatItem(BaseModel):
     TIMESTAMP: str
     HOTKEY: str
+    INCENTIVE: int
     TIER: str
     CURRENT_STORAGE: int
     CAPACITY: int
@@ -42,6 +43,7 @@ async def get_miner_statistics_endpoint(start_time: int = 0, end_time: int = 0, 
         id,
         timestamp,
         hotkey,
+        incentive,
         tier,
         current_storage,
         capacity,
@@ -58,6 +60,7 @@ async def get_miner_statistics_endpoint(start_time: int = 0, end_time: int = 0, 
         row = MinerStatItem(
             TIMESTAMP=timestamp,
             HOTKEY=hotkey,
+            INCENTIVE=incentive,
             TIER=tier,
             CURRENT_STORAGE=current_storage,
             CAPACITY=capacity,

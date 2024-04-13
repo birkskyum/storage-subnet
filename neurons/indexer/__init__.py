@@ -1,7 +1,9 @@
 import threading
 import bittensor as bt
-from time import sleep
 import asyncio
+
+from time import sleep
+from substrateinterface import SubstrateInterface
 
 import indexer.endpoint as endpoint
 from .sqlite import query
@@ -16,6 +18,18 @@ from .redis import (
     total_successful_requests,
     active_hotkeys
 )
+
+substrate = None
+
+def get_substrate():
+    global substrate
+    if substrate == None:
+        substrate = SubstrateInterface(
+            url=bt.__finney_test_entrypoint__,
+            ss58_format=bt.__ss58_format__,
+            type_registry=bt.__type_registry__
+        )
+    return substrate
 
 def create_tables():
     query('''
@@ -53,6 +67,7 @@ def create_tables():
             id INTEGER PRIMARY KEY,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             hotkey VARCHAR(255) NOT NULL,
+            incentive BIGINT NOT NULL,
             tier VARCHAR(50) NOT NULL,
             current_storage BIGINT NOT NULL,
             capacity BIGINT NOT NULL,
@@ -70,19 +85,24 @@ def create_tables():
     
 HOTKEY_INSERT = """
 INSERT INTO HotkeysTable (
-    HOTKEY, TIER, CURRENT_STORAGE, CAPACITY, PERCENT_USAGE, NUM_HASHES, TOTAL_SUCCESSES, STORE_SUCCESSES, STORE_ATTEMPTS, CHALLENGE_SUCCESSES, CHALLENGE_ATTEMPTS, RETRIEVE_SUCCESSES, RETRIEVE_ATTEMPTS
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    HOTKEY, INCENTIVE, TIER, CURRENT_STORAGE, CAPACITY, PERCENT_USAGE, NUM_HASHES, TOTAL_SUCCESSES, STORE_SUCCESSES, STORE_ATTEMPTS, CHALLENGE_SUCCESSES, CHALLENGE_ATTEMPTS, RETRIEVE_SUCCESSES, RETRIEVE_ATTEMPTS
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 """
 
-async def collect_and_insert_data():
+async def collect_and_insert_data(config):
     stats = get_miner_statistics()
     hotkeys = list(stats)
     caps = cache_hotkeys_capacity(hotkeys)
 
+    substrate = get_substrate()
+    incentives = substrate.query("SubtensorModule", "Incentive", [config.netuid])
+
     for hotkey, stat in stats.items():
         cur, cap = caps[hotkey]
         n_hashes = len(get_hashes_for_hotkey(hotkey))
-        row = [hotkey, stat['tier'], cur, cap, cur / cap, n_hashes, stat['total_successes'], stat['store_successes'], stat['store_attempts'], stat['challenge_successes'], stat['challenge_attempts'], stat['retrieve_successes'], stat['retrieve_attempts']]
+        uid = substrate.query("SubtensorModule", "Uids", [config.netuid, hotkey]).value
+        incentive = incentives[uid].value
+        row = [hotkey, incentive, stat['tier'], cur, cap, cur / cap, n_hashes, stat['total_successes'], stat['store_successes'], stat['store_attempts'], stat['challenge_successes'], stat['challenge_attempts'], stat['retrieve_successes'], stat['retrieve_attempts']]
         print(f"Inserting row for hotkey statistics: {row}")
         query(HOTKEY_INSERT, row)
 
@@ -155,21 +175,19 @@ async def collect_and_insert_data():
 
     query(sql_insert_command, row)
 
-def run():
+def run(config):
     print("Starting up indexer...")
     create_tables()
-
-    sleep(30)
 
     print("Beginning infinite loop...")
     while True:
         print("Collecting and inserting data...")
-        asyncio.get_event_loop().run_until_complete(collect_and_insert_data())
+        asyncio.get_event_loop().run_until_complete(collect_and_insert_data(config))
 
         sleep(3600) # Run loop every hour
 
-def run_indexer_thread():
-    thread = threading.Thread(target=run, daemon=True)
+def run_indexer_thread(config):
+    thread = threading.Thread(target=run, daemon=True, args=[config])
     thread.start()
 
     endpoint.run_in_thread()

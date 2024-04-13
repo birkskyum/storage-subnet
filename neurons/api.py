@@ -464,8 +464,9 @@ class neuron:
 
 
 def run_api():
-    run_indexer_thread()
-    neuron().run()
+    neuron_obj = neuron()
+    run_indexer_thread(neuron_obj.config)
+    neuron_obj.run()
 
 
 if __name__ == "__main__":
