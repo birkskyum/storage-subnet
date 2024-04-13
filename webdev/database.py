@@ -149,6 +149,14 @@ def get_cid_metadata(cid: str, username: str) -> Optional[dict]:
         return None
     return json.loads(md)
 
+def delete_cid_metadata(cid: str, username: str):
+    md = get_cid_metadata(cid, username)
+    if md is not None:
+        redis_db.hdel("metadata:" + username, cid)
+        redis_db.decr("filecount:" + username, 1)
+        redis_db.decr("storage:" + username, md.get("size", 0))
+        redis_db.decr("service:totalFiles", 1)
+
 def file_exists(username: str, filename: str = None, cid: str = None) -> bool:
     """"Check if a file already exists in the user's storage"""
     if cid is not None:
