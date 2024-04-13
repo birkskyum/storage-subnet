@@ -304,6 +304,43 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/delete/{filename}")
+async def delete_user_data(filename: str, current_user: User = Depends(get_current_user)):
+    splt = filename.split(os.path.extsep)
+    filename_no_ext = splt[0]
+
+    if not file_exists(current_user.username, filename=filename_no_ext):
+        raise HTTPException(
+            status_code=404, detail=f"File {filename} does not exist. Please check the filename."
+        )
+
+    cid = get_cid_by_filename(filename_no_ext, current_user.username)
+    if cid is None:
+        raise HTTPException(
+            status_code=404, detail=f"File {filename} does not exist. Please check the filename."
+        )
+
+    delete_cid_metadata(cid, current_user.username)
+
+    return True
+
+    """
+    # TODO: implement DELETE on validator side
+
+    hotkeys = metadata.get("hotkeys")
+
+    metagraph = get_metagraph()
+    uids = None
+    if hotkeys is not None:
+        uids = [metagraph.hotkeys.index(hotkey) for hotkey in hotkeys]
+
+    # Fetch the axons of the available API nodes, or specify UIDs directly
+    axons = await get_query_api_axons(wallet=server_wallet, metagraph=metagraph, uids=uids)
+
+    delete(cid, axons, timeout=10)
+    """
+
 # Perhaps this doesn't need username if we can parse it from the `User` object?
 @app.get("/user_data")
 async def get_user_data(current_user: User = Depends(get_current_user)):
