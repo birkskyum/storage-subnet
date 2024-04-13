@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
@@ -34,6 +35,20 @@ metagraph = get_metagraph()
 
 # Initialize FastAPI app
 app = FastAPI()
+
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+if allowed_origins_env:
+    origins = allowed_origins_env.split(",")
+else:
+    raise RuntimeError("ALLOWED_ORIGINS environment variable not set")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize Password Context for hashing and verifying
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
