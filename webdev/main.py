@@ -172,7 +172,7 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
     if file_exists(current_user.username, filename=filename_no_ext):
         cid = get_cid_by_filename(filename_no_ext, current_user.username)
         hotkeys = get_hotkeys_by_cid(cid, current_user.username)
-        return cid, hotkeys
+        raise HTTPException(status_code=422, detail=f"File already exists on network. CID: {cid} Hotkeys: {hotkeys}")
 
     raw_data = await file.read()
 
@@ -232,7 +232,7 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
             hotkeys = get_hotkeys_by_cid(cid, current_user.username)
             raise HTTPException(
                 status_code=400,
-                detail=f"File {filename_no_ext} already exists. Please choose a unique filename."
+                detail=f"File {filename_no_ext} already exists with CID {cid} and Hotkeys {hotkeys}. Please choose a unique filename."
             )
 
         raw_data = await file.read()
