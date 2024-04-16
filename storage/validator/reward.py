@@ -172,7 +172,7 @@ def scale_rewards(
 
     # Normalize the response times
     bt.logging.trace(f"data_normalized_process_times: {data_normalized_process_times}")
-    normalized_times = sigmoid_normalize(data_normalized_process_times, max(data_normalized_process_times))
+    normalized_times = sigmoid_normalize(data_normalized_process_times, max(data_normalized_process_times) * 2)
 
     # Create a dictionary mapping UIDs to normalized times
     uid_to_normalized_time = {
