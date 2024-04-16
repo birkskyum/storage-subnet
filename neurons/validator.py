@@ -362,15 +362,16 @@ class neuron:
             for event in events:
                 event_dict = event["event"].decode()
                 if event_dict["event_id"] == "NeuronRegistered":
-                    netuid, uid, hotkey = event_dict["attributes"]
+                    netuid, uid, new_hotkey = event_dict["attributes"]
                     if int(netuid) == 21:
                         self.log(
                             f"NeuronRegistered Event {uid}! Rebalancing data...\n"
                             f"{pformat(event_dict)}\n"
                         )
-
+                        replaced_hotkey = self.metagraph.hotkeys[uid]
                         self.last_registered_block = block_no
-                        self.rebalance_queue.append(hotkey)
+                        self.rebalance_queue.append(replaced_hotkey)
+                        self.metagraph.hotkeys[uid] = new_hotkey
 
             # If we have some hotkeys deregistered, and it's been 5 blocks since we've caught a registration: rebalance
             if (
