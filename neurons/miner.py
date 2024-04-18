@@ -779,7 +779,7 @@ class miner:
         bt.logging.debug(f"challenge() prev_seed: {prev_seed}")
         if prev_seed is None:
             # TODO: this should raise an error that would trigger a 404 response in the axon
-            # Currently, the synapse logs show this as successful, because axon recieves a synapse without
+            # Currently, the synapse logs show this as successful, because axon receives a synapse without
             # errors. This is a bug and should be addressed in bittensor.
             bt.logging.error(f"No seed found for {synapse.challenge_hash}")
             return synapse
@@ -798,7 +798,7 @@ class miner:
         synapse.commitment_proof = proof
 
         # update the commitment seed challenge hash in storage
-        bt.logging.trace(f"udpating challenge miner storage: {pformat(data)}")
+        bt.logging.trace(f"updating challenge miner storage: {pformat(data)}")
         await update_seed_info(
             self.database,
             chunk_hash=synapse.challenge_hash,
@@ -950,7 +950,7 @@ class miner:
             hotkey=synapse.dendrite.hotkey,
             seed=synapse.seed,
         )
-        bt.logging.debug(f"udpated retrieve miner storage: {pformat(data)}")
+        bt.logging.debug(f"updated retrieve miner storage: {pformat(data)}")
 
         # Return base64 data
         bt.logging.trace("entering b64_encode()")
