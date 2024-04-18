@@ -69,17 +69,29 @@ class Subnet21API(ABC):
         def is_successful(response):
             return response.axon.status_code == 200
 
-        while tasks:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        try:
+            while tasks:
+                done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
-            for task in done:
-                try:
-                    response = await task
-                    if is_successful(response):
-                        return self.process_responses([response])
-                except Exception as e:
-                    print("Task failed:", e)
+                for task in done:
+                    if task.done():
+                        try:
+                            response = await task
+                            if is_successful(response):
+                                for p in pending:
+                                    p.cancel()
+                                await asyncio.gather(*pending, return_exceptions=True)
+                                return self.process_responses([response])
+                        except Exception as e:
+                            bt.logging.error(f"Task failed: {e}")
 
-            tasks = list(pending)
+                tasks = list(pending)
 
-        return None
+            return None, []
+
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+
+            await asyncio.gather(*tasks, return_exceptions=True)
