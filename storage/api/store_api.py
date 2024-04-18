@@ -21,6 +21,7 @@ import os
 import torch
 import base64
 import random
+import asyncio
 import bittensor as bt
 from abc import ABC, abstractmethod
 from typing import Any, List, Union
@@ -104,6 +105,8 @@ async def store(
     uid: int = None,
     metadata_path: str = None,
     name: str = None,
+    max_retries: int = 3,
+    backoff_factor: float = 2.0,
 ):
 
     """
@@ -127,34 +130,42 @@ async def store(
         str: The CID of the stored data.
         hotkeys: The hotkeys of the successfully stored data.
     """
-    store_handler = StoreUserAPI(wallet)
+    retry_count = 0
+    delay = 2
 
-    subtensor = subtensor or bt.subtensor(chain_endpoint)
-    metagraph = subtensor.metagraph(netuid=netuid)
+    while retry_count <= max_retries:
+        try:
+            store_handler = StoreUserAPI(wallet)
+            subtensor = subtensor or bt.subtensor(chain_endpoint)
+            metagraph = subtensor.metagraph(netuid=netuid)
 
-    uids = None
-    if uid is not None:
-        uids = [uid]
+            uids = [uid] if uid is not None else None
+            all_axons = await get_query_api_axons(wallet=wallet, metagraph=metagraph, uids=uids)
+            axons = random.choices(all_axons, k=min(3, len(all_axons)))
 
-    all_axons = await get_query_api_axons(wallet=wallet, metagraph=metagraph, uids=uids)
-    axons = random.choices(all_axons, k=min(3, len(all_axons)))
+            cid, hotkeys = await store_handler(
+                axons=axons,
+                data=data,
+                encrypt=encrypt,
+                ttl=ttl,
+                encoding=encoding,
+                uid=uid,
+                timeout=timeout,
+            )
 
-    cid, hotkeys = await store_handler(
-        axons=axons,
-        data=data,
-        encrypt=encrypt,
-        ttl=ttl,
-        encoding=encoding,
-        uid=uid,
-        timeout=timeout,
-    )
+            if cid != "" and hotkeys:
+                metadata_path = os.path.expanduser(metadata_path or defaults.hash_basepath)
+                hash_filepath = os.path.join(metadata_path, wallet.name + ".json")
+                if not os.path.exists(hash_filepath):
+                    os.makedirs(hash_filepath)
 
-    metadata_path = os.path.expanduser(metadata_path or defaults.hash_basepath)
-    hash_filepath = os.path.join(metadata_path, wallet.name + ".json")
-    if not os.path.exists(hash_filepath):
-        os.mkdirs(hash_filepath)
+                save_hash_mapping(hash_filepath, name or cid, cid, hotkeys)
+                return cid, hotkeys
+        except Exception as e:
+            print(f"Attempt {retry_count + 1} failed: {str(e)}")
 
-    if hotkeys != []:
-        save_hash_mapping(hash_filepath, name or cid, cid, hotkeys)
+        await asyncio.sleep(delay)
+        delay *= backoff_factor
+        retry_count += 1
 
-    return cid, hotkeys
+    raise Exception("Maximum retry limit reached without success.")

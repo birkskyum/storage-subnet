@@ -20,6 +20,7 @@
 import os
 import torch
 import base64
+import asyncio
 import bittensor as bt
 from typing import Any, List, Union
 from storage.protocol import RetrieveUser
@@ -86,6 +87,8 @@ async def retrieve(
     hotkeys: List[str] = None,
     metadata_path: str = None,
     name: str = None,
+    max_retries: int = 3,
+    backoff_factor: float = 2.0,
 ) -> bytes:
     """
     Retrieve data from the subtensor network.
@@ -102,6 +105,8 @@ async def retrieve(
         metadata_path (str, optional): The path to the hash metadata. Defaults to None.
         name (str, optional): The name of the file to find metadata for. Defaults to None.
     """
+    retry_count = 0
+    delay = 2
 
     retrieve_handler = RetrieveUserAPI(wallet)
 
@@ -122,10 +127,24 @@ async def retrieve(
 
     axons = await get_query_api_axons(wallet=wallet, metagraph=metagraph, uids=uids)
 
-    data = await retrieve_handler(
-        axons=axons,
-        cid=cid,
-        timeout=timeout,
-    )
+    while retry_count <= max_retries:
+        try:
+
+            data = await retrieve_handler(
+                axons=axons,
+                cid=cid,
+                timeout=timeout,
+            )
+
+            if data != b"":
+                return data
+
+        except Exception as e:
+            print(f"Attempt {retry_count + 1} failed: {str(e)}")
+
+        await asyncio.sleep(delay)
+
+        delay *= backoff_factor
+        retry_count += 1
 
     return data
