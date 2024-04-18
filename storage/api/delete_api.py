@@ -24,7 +24,7 @@ import random
 import bittensor as bt
 from abc import ABC, abstractmethod
 from typing import Any, List, Union, Dict
-from storage.protocol import StoreUser
+from storage.protocol import DeleteUser
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import encrypt_data
 from storage.api.utils import get_query_api_axon
