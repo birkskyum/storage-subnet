@@ -33,16 +33,12 @@ METAGRAPH_ATTRIBUTES = [
     "uids"
 ]
 
-# def get_database() -> StrictRedis:
-#     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-#     return StrictRedis.from_url(redis_url, db=os.getenv("REDIS_DB", 2)) if redis_db == None else redis_db
-
 
 def get_database() -> StrictRedis:
     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
     redis_password = os.getenv('REDIS_PASSWORD')  # Retrieve password from environment
     # Include the password in the connection
-    return StrictRedis.from_url(redis_url, password=redis_password) if redis_db is None else redis_db
+    return StrictRedis.from_url(redis_url, password=redis_password, db=os.getenv("REDIS_DB", 2)) if redis_db is None else redis_db
 
 def startup():
     global redis_db
@@ -157,14 +153,11 @@ def delete_cid_metadata(cid: str, username: str):
         redis_db.decr("storage:" + username, md.get("size", 0))
         redis_db.decr("service:totalFiles", 1)
 
-def file_exists(username: str, filename: str = None, cid: str = None) -> bool:
+def file_cid_exists(username: str, cid: str) -> bool:
+    return redis_db.hget("metadata:" + username, cid) is not None
+
+def filename_exists(username: str, filename: str) -> bool:
     """"Check if a file already exists in the user's storage"""
-    if cid is not None:
-        return redis_db.hget("metadata:" + username, cid) is not None
-
-    if filename is None:
-       return False
-
     cids = redis_db.hkeys("metadata:" + username)
     for cid in cids:
         md = get_cid_metadata(cid, username)
@@ -179,6 +172,12 @@ def get_cid_by_filename(filename: str, username: str) -> List[str]:
         md = get_cid_metadata(cid, username)
         if md.get("filename", "") == filename:
             return cid
+
+def rename_file(username: str, cid: str, new_filename: str):
+    md = get_cid_metadata(cid, username)
+    if md is not None:
+        md["filename"] = new_filename
+        redis_db.hset("metadata:" + username, cid, json.dumps(md))
 
 def get_user_metadata(username: str) -> Optional[str]:
     return redis_db.hgetall("metadata:" + username)

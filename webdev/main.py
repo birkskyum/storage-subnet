@@ -13,11 +13,13 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict
+from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import encrypt_data, decrypt_data_with_private_key
 from storage.api import StoreUserAPI, RetrieveUserAPI, get_query_api_axons, store, retrieve
 from webdev.database import startup, get_database, get_user, create_user, get_server_wallet, get_metagraph
 from webdev.database import Token, TokenData, User, UserInDB, store_file_metadata, get_user_metadata
-from webdev.database import file_exists, get_cid_by_filename, get_cid_metadata, get_user_stats, get_hotkeys_by_cid
+from webdev.database import filename_exists, file_cid_exists, get_cid_by_filename, get_cid_metadata
+from webdev.database import get_user_stats, get_hotkeys_by_cid
 
 
 os.environ['ACCESS_TOKEN_EXPIRE_MINUTES']='15'
@@ -169,10 +171,18 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
     filename_no_ext = splt[0]
 
     # If exists, don't attempt to overwrite on the network.
-    if file_exists(current_user.username, filename=filename_no_ext):
-        cid = get_cid_by_filename(filename_no_ext, current_user.username)
-        hotkeys = get_hotkeys_by_cid(cid, current_user.username)
-        raise HTTPException(status_code=422, detail=f"File already exists on network. CID: {cid} Hotkeys: {hotkeys}")
+    _cid = generate_cid_string(file)
+    if file_cid_exists(current_user.username, cid=_cid):
+        # Just overwrite the metadata and return (e.g. rename the file, but don't change data on network)
+        rename_file(
+            username=current_user.username,
+            cid=_cid,
+            new_filename=filename_no_ext,
+        )
+        md = get_cid_metadata(_cid, current_user.username)
+        return _cid, md.get("hotkeys", [])
+    elif filename_exists(current_user.username, filename=filename_no_ext):
+        pass # We will overwrite file content with the same name without warning.
 
     raw_data = await file.read()
 
@@ -227,13 +237,20 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
         splt = file.filename.split(os.path.extsep)
         filename_no_ext = splt[0]
 
-        if file_exists(current_user.username, filename=filename_no_ext):
-            cid = get_cid_by_filename(filename_no_ext, current_user.username)
-            hotkeys = get_hotkeys_by_cid(cid, current_user.username)
-            raise HTTPException(
-                status_code=400,
-                detail=f"File {filename_no_ext} already exists with CID {cid} and Hotkeys {hotkeys}. Please choose a unique filename."
+        # If cid exists, don't attempt to overwrite on the network but update the metadata.
+        _cid = generate_cid_string(file)
+        if file_cid_exists(current_user.username, cid=_cid):
+            # Just overwrite the metadata and return (e.g. rename the file, but don't change data on network)
+            rename_file(
+                username=current_user.username,
+                cid=_cid,
+                new_filename=filename_no_ext,
             )
+            md = get_cid_metadata(_cid, current_user.username)
+            return _cid, md.get("hotkeys", [])
+        # If the filename exists, overwrite regardless if the content is different.
+        elif filename_exists(current_user.username, filename=filename_no_ext):
+            pass # We will overwrite file content with the same name without warning.
 
         raw_data = await file.read()
 
@@ -276,7 +293,7 @@ async def retrieve_user_data(filename: str, current_user: User = Depends(get_cur
     splt = filename.split(os.path.extsep)
     filename_no_ext = splt[0]
 
-    if not file_exists(current_user.username, filename=filename_no_ext):
+    if not filename_exists(current_user.username, filename=filename_no_ext):
         raise HTTPException(
             status_code=404, detail=f"File {filename} does not exist. Please check the filename."
         )
