@@ -19,7 +19,7 @@ from storage.api import StoreUserAPI, RetrieveUserAPI, get_query_api_axons, stor
 from webdev.database import startup, get_database, get_user, create_user, get_server_wallet, get_metagraph
 from webdev.database import Token, TokenData, User, UserInDB, store_file_metadata, get_user_metadata
 from webdev.database import filename_exists, file_cid_exists, get_cid_by_filename, get_cid_metadata
-from webdev.database import get_user_stats, get_hotkeys_by_cid
+from webdev.database import get_user_stats, get_hotkeys_by_cid, delete_cid_metadata, rename_file
 
 
 os.environ['ACCESS_TOKEN_EXPIRE_MINUTES']='15'
