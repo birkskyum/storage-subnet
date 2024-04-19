@@ -729,6 +729,8 @@ class miner:
         )
         if data is None:
             bt.logging.error(f"No data found for {synapse.challenge_hash}")
+            synapse.axon.status_code = 404
+            synapse.axon.status_message = "File metadata not found"
             return synapse
 
         bt.logging.trace(f"retrieved data: {pformat(data)}")
@@ -778,10 +780,9 @@ class miner:
         prev_seed = data.get("seed", "").encode()
         bt.logging.debug(f"challenge() prev_seed: {prev_seed}")
         if prev_seed is None:
-            # TODO: this should raise an error that would trigger a 404 response in the axon
-            # Currently, the synapse logs show this as successful, because axon receives a synapse without
-            # errors. This is a bug and should be addressed in bittensor.
             bt.logging.error(f"No seed found for {synapse.challenge_hash}")
+            synapse.axon.status_code = 404
+            synapse.axon.status_message = "Previous seed not found"
             return synapse
 
         bt.logging.trace("entering comput_subsequent_commitment()...")

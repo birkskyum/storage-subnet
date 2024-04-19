@@ -40,6 +40,7 @@ from storage.validator.retrieve import retrieve_broadband
 from storage.validator.database import retrieve_encryption_payload, get_ordered_metadata
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import decrypt_data_with_private_key
+from storage.validator.dendrite import timed_dendrite
 
 
 def MockDendrite():
@@ -191,7 +192,7 @@ class neuron:
         if self.config.neuron.mock:
             self.dendrite = MockDendrite()  # TODO: fix this import error
         else:
-            self.dendrite = bt.dendrite(wallet=self.wallet)
+            self.dendrite = timed_dendrite(wallet=self.wallet)
         bt.logging.debug(str(self.dendrite))
 
         # Init the event loop.
@@ -286,15 +287,21 @@ class neuron:
         )
 
     async def store_priority(self, synapse: protocol.StoreUser) -> float:
+        if self.config.api.open_access:
+            return 1.0
+
         caller_uid = self.metagraph.hotkeys.index(
             synapse.dendrite.hotkey
         )  # Get the caller index.
+
         priority = float(
             self.metagraph.S[caller_uid]
         )  # Return the stake as the priority.
+
         bt.logging.trace(
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", priority
         )
+
         return priority
 
     async def retrieve_user_data(
@@ -364,15 +371,21 @@ class neuron:
         )
 
     async def retrieve_priority(self, synapse: protocol.RetrieveUser) -> float:
+        if self.config.api.open_access:
+            return 1.0
+
         caller_uid = self.metagraph.hotkeys.index(
             synapse.dendrite.hotkey
         )  # Get the caller index.
+
         priority = float(
             self.metagraph.S[caller_uid]
         )  # Return the stake as the priority.
+
         bt.logging.trace(
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", priority
         )
+
         return priority
 
     def run(self):
