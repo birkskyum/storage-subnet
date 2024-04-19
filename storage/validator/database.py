@@ -285,7 +285,7 @@ async def get_metadata_for_hotkey_and_hash(
     Retrieves specific metadata from a hash in Redis for the given field_key.
 
     Parameters:
-        ss58_address (str): The hotkey assoicated.
+        ss58_address (str): The hotkey associated.
         data_hash (str): The data hash associated.
         databse (aioredis.Redis): The Redis client instance.
 
@@ -859,7 +859,7 @@ async def get_ordered_metadata(
     return [chunk_info for _, chunk_info in ordered_chunks]
 
 
-# Function to grab mutually exclusiv UIDs for a specific full_hash (get chunks of non-overlapping UIDs)
+# Function to grab mutually exclusive UIDs for a specific full_hash (get chunks of non-overlapping UIDs)
 async def retrieve_mutually_exclusive_hotkeys_full_hash(
     full_hash: str, database: aioredis.Redis
 ) -> Dict[str, List[str]]:
