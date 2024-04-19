@@ -212,7 +212,7 @@
 ## 1.3.3 / 2024-01-18
 
 ## What's Changed
-* Hotfix/validator subscrition handler by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/90
+* Hotfix/validator subscription handler by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/90
 
 
 **Full Changelog**: https://github.com/ifrit98/storage-subnet/commits/v1.3.3
@@ -389,7 +389,7 @@
 * Release/1.1.1 by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/43
 * hotfix challenge adjustment and reduce rewards vector size by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/47
 * Validator fix block hash selection by @Rubberbandits in https://github.com/ifrit98/storage-subnet/pull/48
-* Exploring storage/miner/run and setting weights logic. Enhacing logic to control more scenarios by @eduardogr in https://github.com/ifrit98/storage-subnet/pull/51
+* Exploring storage/miner/run and setting weights logic. Enhancing logic to control more scenarios by @eduardogr in https://github.com/ifrit98/storage-subnet/pull/51
 * Release/1.2.0 by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/53
 * update to sigmoid reward scaling for latency by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/64
 * Release/1.2.1 by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/67
@@ -425,7 +425,7 @@
 ## What's Changed
 * hotfix challenge adjustment and reduce rewards vector size by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/47
 * Validator fix block hash selection by @Rubberbandits in https://github.com/ifrit98/storage-subnet/pull/48
-* Exploring storage/miner/run and setting weights logic. Enhacing logic to control more scenarios by @eduardogr in https://github.com/ifrit98/storage-subnet/pull/51
+* Exploring storage/miner/run and setting weights logic. Enhancing logic to control more scenarios by @eduardogr in https://github.com/ifrit98/storage-subnet/pull/51
 * Package by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/49
 * Improve miner stats visibility in logging by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/44
 * add migration script and database func to move filepaths of data index by @ifrit98 in https://github.com/ifrit98/storage-subnet/pull/50
@@ -451,5 +451,5 @@
 * Fix broken imports and some typos
 * up ping timeout limit, caused issues with incorrectly flagging UIDs as down
 * bugfix in verify store with miners no longer returning data, verify on validator side with seed
-* incresae challenge timeout
+* increase challenge timeout
 * update version key

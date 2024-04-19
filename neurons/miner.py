@@ -799,7 +799,7 @@ class miner:
         synapse.commitment_proof = proof
 
         # update the commitment seed challenge hash in storage
-        bt.logging.trace(f"udpating challenge miner storage: {pformat(data)}")
+        bt.logging.trace(f"updating challenge miner storage: {pformat(data)}")
         await update_seed_info(
             self.database,
             chunk_hash=synapse.challenge_hash,
@@ -951,7 +951,7 @@ class miner:
             hotkey=synapse.dendrite.hotkey,
             seed=synapse.seed,
         )
-        bt.logging.debug(f"udpated retrieve miner storage: {pformat(data)}")
+        bt.logging.debug(f"updated retrieve miner storage: {pformat(data)}")
 
         # Return base64 data
         bt.logging.trace("entering b64_encode()")
