@@ -10,16 +10,28 @@ from storage.shared.utils import is_running_in_docker
 
 
 async def check_environment(
-    redis_conf_path: str = "/etc/redis/redis.conf",
+    redis_conf_path: str | None = "/etc/redis/redis.conf",
     redis_host: str = "localhost",
     redis_port: int = 6379,
-    redis_password: str = "nopasswd"
+    redis_password: str = "nopasswd",
+    skip_native_env_redis_checks: bool = False,
 ):
-    _check_redis_config(redis_conf_path)
-    _check_redis_settings(redis_conf_path)
-    _assert_setting_exists(redis_conf_path, "requirepass")
+    """
+    Check the environment for the required settings and configurations.
+
+    :param redis_conf_path: The path to the Redis configuration file. Can be `None` if non-local Redis is used.
+    :param redis_host: The host name of the Redis server.
+    :param redis_port: The port number of the Redis server.
+    :param redis_password: The password to use when connecting to Redis.
+    :param skip_native_env_redis_checks: Skip the native environment checks that assume Redis is running on
+                                         the same machine.
+    """
     await _check_redis_connection(redis_conf_path, redis_host, redis_port, redis_password)
-    if not is_running_in_docker:
+    skip_native_env_redis_checks = skip_native_env_redis_checks or is_running_in_docker()
+    if redis_conf_path and not skip_native_env_redis_checks:
+        _check_redis_config(redis_conf_path)
+        _check_redis_settings(redis_conf_path)
+        _assert_setting_exists(redis_conf_path, "requirepass")
         await _check_data_persistence(redis_conf_path, redis_host, redis_port, redis_password)
 
 
@@ -61,7 +73,7 @@ async def _check_data_persistence(redis_conf_path, host, port, passwd):
     await client.set("testkey", "Hello, Redis!")
 
     # Restart Redis server
-    cmd = ["systemctl", "restart", "redis-server.service"] if is_running_in_docker() else [
+    cmd = [
         "sudo", "systemctl", "restart", "redis-server.service"
     ]
     subprocess.run(cmd, check=True)
