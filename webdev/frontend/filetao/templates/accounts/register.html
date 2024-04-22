@@ -1,33 +1,49 @@
-{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Register</title>
+    {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('show-fields').addEventListener('click', function() {
+                var extraFields = document.getElementById('extra-fields');
+                if (extraFields.style.display === 'none') {
+                    extraFields.style.display = 'block';
+                } else {
+                    extraFields.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="nav-links">
+    <div class="logo">
+        {% load static %}
+        <img src="{% static 'images/logo.png' %}" alt="Logo">
+    </div>
+    <div class="line" style="width: 70%"></div>
+    <div class="navbar">
         {% if not request.session.token %}
-            <a href="{% url 'register' %}">Register</a>
-            <a href="{% url 'login' %}">Login</a>
+        <a href="{% url 'register' %}">Register</a>
+        <a href="{% url 'login' %}">Login</a>
         {% else %}
-            <a href="{% url 'upload_file' %}">Upload File</a>
-            <a href="{% url 'retrieve_file' %}">Retrieve File</a>
-        {% endif %}
-        </div>
-        {% if request.session.token %}
-        <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <input type="submit" name="submit" value="Logout">
-        </form>
+        <a href="{% url 'upload_file' %}">Upload File</a>
+        <a href="{% url 'retrieve_file' %}">Retrieve File</a>
+        <a href="{% url 'logout' %}">Logout</a>
         {% endif %}
     </div>
+    <div class="line" style="width: 50%"></div>
 
     <form class="login-form" method="post">
         {% csrf_token %}
-        <input type="username" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
+        {{ form.username }}
+        {{ form.password }}
+        <div id="extra-fields" style="display: none;">
+            {{ form.coldkey }}
+            {{ form.hotkey }}
+        </div>
+        <input type="button" id="show-fields" value="Show Extra Fields">
         <input type="submit" name="submit" value="Register">
     </form>
 </body>

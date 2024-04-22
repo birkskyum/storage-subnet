@@ -1,34 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upload File</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('file-upload').addEventListener('change', function() {
+                    var fileName = this.files[0] ? this.files[0].name : 'Choose file';
+                    document.getElementById('file-name').textContent = fileName;
+            });
+        });
+    </script>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="nav-links">
+    <div class="logo">
+        {% load static %}
+        <img src="{% static 'images/logo.png' %}" alt="Logo">
+    </div>
+    <div class="line" style="width: 70%"></div>
+    <div class="navbar">
         {% if not request.session.token %}
-            <a href="{% url 'register' %}">Register</a>
-            <a href="{% url 'login' %}">Login</a>
+        <a href="{% url 'register' %}">Register</a>
+        <a href="{% url 'login' %}">Login</a>
         {% else %}
-            <a href="{% url 'upload_file' %}">Upload File</a>
-            <a href="{% url 'retrieve_file' %}">Retrieve File</a>
-        {% endif %}
-        </div>
-        {% if request.session.token %}
-        <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <input type="submit" name="submit" value="Logout">
-        </form>
+        <a href="{% url 'upload_file' %}">Upload File</a>
+        <a href="{% url 'retrieve_file' %}">Retrieve File</a>
+        <a href="{% url 'logout' %}">Logout</a>
         {% endif %}
     </div>
+    <div class="line" style="width: 50%"></div>
+
+    <div class="form-container">
+        <form class="upload-retrieve" action="{% url 'upload_file' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label id="file-label" for="file-upload" class="file-upload">
+                <span id="file-name">Choose file</span>
+                <input type="file" id="file-upload" name="file" multiple>
+            </label>
+            <br>
+            <br>
+            <input type="submit" value="Upload">
     
-    <h1>Upload a file</h1>
-    <form method="post" enctype="multipart/form-data" class="login-form">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <input type="submit" name="submit" value="Upload">
-    </form>
+            <p>{{ data }}</p>
+    
+        </form>
+    </div>
 </body>
 </html>

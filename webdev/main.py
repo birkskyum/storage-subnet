@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import bittensor as bt
+from substrateinterface import Keypair as kp
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -50,6 +51,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 class UserInfo(BaseModel):
     username: str
     password: str
+    coldkey: Optional[str] = None
+    hotkey: Optional[str] = None
 
 # Managmeent of Passwords
 def verify_password(plain_password, hashed_password):
@@ -87,17 +90,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 # User Registration Endpoint
 @app.post("/register/")
 async def register_user(user_info: UserInfo):
-    username=user_info.username
-    password=user_info.password
-    if get_user(username) is not None:
+    if get_user(user_info.username) is not None:
         raise HTTPException(status_code=400, detail="Username already registered")
-
+    
+    print(user_info.coldkey, user_info.hotkey)
+    
     # Generate wallet. Use `username` for coldkey and `default` hotkey
-    user_wallet = bt.wallet(name=username)
-    user_wallet.create(coldkey_use_password=False, hotkey_use_password=False)
+    user_wallet = bt.wallet(name=user_info.username)
+    if len(user_info.hotkey) <= 1 or len(user_info.coldkey) <= 1:
+        user_wallet.create(coldkey_use_password=False, hotkey_use_password=False)
+    else:
+        user_wallet.set_coldkey(kp.create_from_mnemonic(user_info.coldkey), encrypt=False)
+        user_wallet.set_hotkey(kp.create_from_mnemonic(user_info.hotkey), encrypt=False)
 
     # Hash the password and generate a seed for the user
-    hashed_password = get_password_hash(password)
+    hashed_password = get_password_hash(user_info.password)
     seed = generate_seed()
     name = user_wallet.name
     hotkey = user_wallet.hotkey.ss58_address
@@ -106,7 +113,7 @@ async def register_user(user_info: UserInfo):
         raise HTTPException(status_code=500, detail="Mnemonic not generated")
 
     user = UserInDB(
-        username = username, 
+        username = user_info.username, 
         hashed_password = hashed_password, 
         seed = seed, 
         wallet_name = name, 
@@ -114,7 +121,7 @@ async def register_user(user_info: UserInfo):
         wallet_mnemonic = mnemonic
     )
     create_user(user)
-    return {"message": f"User {username} registered successfully"}
+    return {"message": f"User {user_info.username} registered successfully"}
 
 # User Login and Token Generation Endpoint
 @app.post("/token", response_model=Token)

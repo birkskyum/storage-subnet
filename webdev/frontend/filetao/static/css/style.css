@@ -1,99 +1,174 @@
-/* styles.css */
-
 body {
-    font-family: Arial, sans-serif;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-}
-
-.top-bar {
-    background-color: #f8f8f8;
-    height: 50px;
-    border-bottom: 1px solid #e7e7e7;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    position: fixed;
-    top: 0;
-}
-
-.top-bar a {
-    margin: 0 20px;
-    text-decoration: none;
-    color: #333;
-}
-
-.top-bar a:hover {
-    color: #007BFF;
-}
-
-.top-bar form {
-    margin-left: auto;
-}
-
-.top-bar form input[type="submit"] {
-    background: none;
-    border: none;
-    color: #333;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    margin: 4px 2px;
-    cursor: pointer;
-}
-
-.top-bar form input[type="submit"]:hover {
-    color: #007BFF;
-}
-
-.nav-links {
-    display: flex;
-    justify-content: center;
-    flex-grow: 1;
-}
-
-.content {
-    text-align: center;
-    margin-top: 60px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.login-form {
-    width: 300px;
-    background-color: white;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-}
-
-.login-form input[name="authkey"],
-.login-form input[name="username"],
-.login-form input[name="password"],
-.login-form input[name="submit"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
     box-sizing: border-box;
 }
 
-.login-form input[name="submit"] {
-    border: none;
-    color: white;
-    background-color: #007BFF;
+.logo {
+    margin-top: 20vh;
+    margin-bottom: 10vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.login-form input[name="submit"]:hover {
-    background-color: #0056b3;
+.logo img {
+    height: 50px;
+}
+
+.line {
+    height: 2px;
+    background: #6f6f6f;
+    width: 100%;
+}
+
+.navbar {
+    width: 100%;
+    height: 10vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.navbar a {
+    margin: 0 2vw;
+    text-decoration: none;
+    color: black;
+    font-size: 1.8vw; /* Adjust the size of the items based on the viewport width */
+}
+
+@media screen and (max-width: 600px) {
+    .navbar a {
+        font-size: 12px; /* Set a minimum font size for small screens */
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    .navbar a {
+        font-size: 20px; /* Set a maximum font size for large screens */
+    }
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px; /* This adds some space between the elements */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) scale(1.25);
+    text-align: center;
+}
+
+.login-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px; /* This adds some space between the form fields */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) scale(1.25);
+}
+
+.login-form input {
+    border: 2px solid black; /* Adjust the border size as needed */
+    outline: none;
+}
+
+.login-form input[type="submit"] {
+    border: none;
+    border-top: 2px solid black;
+    border-bottom: 2px solid black;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: black;
+    background: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-form input[type="submit"]:hover {
+    animation: fillButton 0.3s forwards;
+}
+
+.login-form input[type="button"] {
+    border: none;
+    border-top: 2px solid black;
+    border-bottom: 2px solid black;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: black;
+    background: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-form input[type="button"]:hover {
+    animation: fillButton 0.3s forwards;
+}
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+    border: 1px solid black;
+    top: 5%;
+    width: 30%;
+    height: 30%;
+    padding: 20px; /* Add padding to give some space inside the box */
+    box-sizing: border-box; /* This makes sure the padding is included in the width and height */
+    transform: scale(1.25);
+}
+
+.upload-retrieve {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.upload-retrieve input {
+    border: 2px solid black; /* Adjust the border size as needed */
+    outline: none;
+}
+  
+.file-upload {
+    border: none;
+    border-top: 2px solid black;
+    border-bottom: 2px solid black;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: black;
+    background: white;
+    width: 100%; /* Add this line */
+}
+
+.form-container input[type="file"] {
+    display: none;
+}
+
+.form-container input[type="submit"] {
+    border: none;
+    border-top: 2px solid black;
+    border-bottom: 2px solid black;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: black;
+    background: white;
+    position: relative;
+    overflow: hidden;
 }
