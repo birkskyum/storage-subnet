@@ -131,17 +131,20 @@ class miner:
         bt.logging.info(f"{self.config}")
 
         redis_password = get_redis_password(self.config.database.redis_password)
-        try:
-            asyncio.run(check_environment(
-                self.config.database.redis_conf_path,
-                self.config.database.host,
-                self.config.database.port,
-                redis_password
-            ))
-        except AssertionError as e:
-            bt.logging.warning(
-                f"Something is missing in your environment: {e}. Please check your configuration, use the README for help, and try again."
-            )
+        if self.config.database.native_environment_check:
+            try:
+                asyncio.run(check_environment(
+                    self.config.database.redis_conf_path,
+                    self.config.database.host,
+                    self.config.database.port,
+                    redis_password
+                ))
+            except AssertionError as e:
+                bt.logging.warning(
+                    f"Something is missing in your environment: {e}. Please check your configuration, use the README for help, and try again."
+                )
+        else:
+            bt.logging.info("Skipping environment checks.")
 
         bt.logging.info("miner.__init__()")
 
