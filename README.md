@@ -67,6 +67,7 @@ Currently supporting `python>=3.9,<3.12`.
 12. [Database Schema Migration](#database-schema-migration)
 13. [Disable RDB](#disable-rdb)
 14. [FileTAO Docker](#filetao-docker)
+15. [Demos](#demo-notebooks-and-examples)
 
 ## Installation
 ```bash
@@ -636,30 +637,48 @@ Importance of Tier System:
 
 1. 🎇 **Super Saiyan Tier:** 
    - **Storage Limit:** 1 Exabyte (EB)
-   - **Store Wilson Score:** 0.88
-   - **Minimum Successes Required:** 10,000
+   - **Store Wilson Score:** 0.9
+   - **Minimum Successes Required:** 15,000
    - **Reward Factor:** 1.0 (100% rewards)
 
-2. 💎 **Diamond Tier:**
-   - **Storage Limit:** 1 Petabyte (PB)
-   - **Store Wilson Score:**  0.77
-   - **Minimum Successes Required:** 5,000
-   - **Reward Factor:** 0.9 (90% rewards)
+2. 🌹 **Ruby Tier**
+   - **Storage Limit:** 100 Petabytes (PB)
+   - **Store Wilson Score:** 0.85
+   - **Minimum Successes Required:** 10,000
+   - **Rewrd Factor:** 0.9 (90% rewards)
 
-3. 🥇 **Gold Tier:**
-   - **Storage Limit:** 100 Terabytes (TB)
-   - **Store Wilson Score:** 0.66
-   - **Minimum Successes Required:** 2,000
+3. 🔮 **Emerald Tier**
+   - **Storage Limit:** 10 Petabytes (PB)
+   - **Store Wilson Score:** 0.8
+   - **Minimum Successes Required:** 8,000
+   - **Rewrd Factor:** 0.85 (85% rewards)
+
+4. 💠 **Diamond Tier:**
+   - **Storage Limit:** 1 Petabyte (PB)
+   - **Store Wilson Score:**  0.75
+   - **Minimum Successes Required:** 6,000
    - **Reward Factor:** 0.8 (80% rewards)
 
-4. 🥈 **Silver Tier:**
-   - **Storage Limit:** 10 Terabytes (TB)
-   - **Store Wilson Score:** 0.55
-   - **Minimum Successes Required:** 1,000
+5. 🔗 **Platinum Tier**
+   - **Storage Limit:** 500 Terabytes (TB)
+   - **Store Wilson Score:** 0.65
+   - **Minimum Successes Required:** 4,000
+   - **Reward Factor:** 0.75 (75% rewards) 
+
+6. 🥇 **Gold Tier:**
+   - **Storage Limit:** 200 Terabytes (TB)
+   - **Store Wilson Score:** 0.65
+   - **Minimum Successes Required:** 2,000
    - **Reward Factor:** 0.7 (70% rewards)
 
-5. 🥉 **Bronze Tier:**
-   - **Storage Limit:** 1 Terabyte (TB)
+7. 🥈 **Silver Tier:**
+   - **Storage Limit:** 50 Terabytes (TB)
+   - **Store Wilson Score:** 0.6
+   - **Minimum Successes Required:** 500
+   - **Reward Factor:** 0.65 (65% rewards)
+
+8. 🥉 **Bronze Tier:**
+   - **Storage Limit:** 10 Terabytes (TB)
    - **Store Wilson Score:** Not specifically defined for this tier
    - **Minimum Successes Required:** Not specifically defined for this tier
    - **Reward Factor:** 0.6 (60% rewards)
@@ -684,9 +703,12 @@ The top two (2) performers per batch of `store`, `challenge` or `retrieve` reque
 ```bash
 TIER_BOOSTS = {
     b"Super Saiyan": 1.02, # 2%  -> 1.02
-    b"Diamond": 1.05,      # 5%  -> 0.945
-    b"Gold": 1.1,          # 10% -> 0.88
-    b"Silver": 1.15,       # 15% -> 0.805
+    b"Ruby": 1.04,         # 4%  -> 0.936
+    b"Emerald": 1.05,      # 6%  -> 0.918
+    b"Diamond": 1.08,      # 8%  -> 0.864
+    b"Platinum": 1.1,      # 10% -> 0.825
+    b"Gold": 1.12,         # 12% -> 0.784
+    b"Silver": 1.16,       # 16% -> 0.754
     b"Bronze": 1.2,        # 20% -> 0.72
 }
 ```
@@ -1152,3 +1174,8 @@ You are free to use this provided docker convenience but may still run nodes on 
  - Once you have the needed env file, you can run the docker compose containers defined. If you have followed the suggested steps, you can use the following commands:
      - To run all services (miner, validator, api) on a single host: `sudo docker compose up --build`
      - To run a single or more services of choices `sudo docker compose up --build {filetao-miner,filetao-validator,filetao-api}` (remove the ones you don't want to run from the command)
+
+
+### Demo notebooks and examples
+
+See [`storage/api/demo_notebook.ipynb`]("docs/api_demo.ipynb") and [`storage/api/example.py`]("storage/api/example.py") To learn different ways to query the subnet.
