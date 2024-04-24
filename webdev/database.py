@@ -116,7 +116,14 @@ def get_user_stats(username: str):
     }
 
 def store_file_metadata(
-    username: str, filename: str, cid: str, hotkeys: List[str], payload: dict, ext: str, size: int = 0
+    username: str,
+    filename: str,
+    cid: str,
+    hotkeys: List[str],
+    payload: dict,
+    ext: str,
+    size: int = 0,
+    incr: bool = True,
 ):
     redis_db.hset(
         "metadata:" + username,
@@ -134,7 +141,8 @@ def store_file_metadata(
     )
     if redis_db.get("filecount:" + username) is None:
         redis_db.set("filecount:" + username, 0)
-    redis_db.incr("filecount:" + username, 1)
+    if incr:
+        redis_db.incr("filecount:" + username, 1)
     redis_db.incr("storage:" + username, size)
     redis_db.incr("service:totalFiles")
 
