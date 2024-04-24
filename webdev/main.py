@@ -173,6 +173,7 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
     raw_data = await file.read()
 
     # If exists, don't attempt to overwrite on the network.
+    incr = True
     _cid = generate_cid_string(raw_data)
     if file_cid_exists(current_user.username, cid=_cid):
         # Just overwrite the metadata and return (e.g. rename the file, but don't change data on network)
@@ -184,7 +185,7 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
         md = get_cid_metadata(_cid, current_user.username)
         return _cid, md.get("hotkeys", [])
     elif filename_exists(current_user.username, filename=filename_no_ext):
-        pass # We will overwrite file content with the same name without warning.
+        incr = False # We will overwrite file content with the same name without warning. Do not increment file count.
 
     # Encrypt the data with the user_wallet, and send with the server_wallet
     if False:
@@ -214,6 +215,7 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
         payload=encryption_payload,
         ext=ext,
         size=sys.getsizeof(encrypted_data),
+        incr=incr,
     )
 
     return cid, hotkeys
@@ -241,6 +243,7 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
 
         # If cid exists, don't attempt to overwrite on the network but update the metadata.
         _cid = generate_cid_string(raw_data)
+        incr = True
         if file_cid_exists(current_user.username, cid=_cid):
             # Just overwrite the metadata and return (e.g. rename the file, but don't change data on network)
             rename_file(
@@ -252,7 +255,7 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
             return _cid, md.get("hotkeys", [])
         # If the filename exists, overwrite regardless if the content is different.
         elif filename_exists(current_user.username, filename=filename_no_ext):
-            pass # We will overwrite file content with the same name without warning.
+            incr = False # We will overwrite file content with the same name without warning. Do not increment file count.
 
         # Encrypt the data with the user_wallet, and send with the server_wallet
         if False:
@@ -282,6 +285,7 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
             payload=encryption_payload,
             ext=ext,
             size=sys.getsizeof(encrypted_data),
+            incr=incr,
         )
 
     return cid, hotkeys
