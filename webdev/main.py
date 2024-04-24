@@ -185,7 +185,7 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
         md = get_cid_metadata(_cid, current_user.username)
         return _cid, md.get("hotkeys", [])
     elif filename_exists(current_user.username, filename=filename_no_ext):
-        incr = False # We will overwrite file content with the same name without warning. Do not increment file count.
+        pass # We will overwrite file content with the same name without warning.
 
     # Encrypt the data with the user_wallet, and send with the server_wallet
     if False:
@@ -255,7 +255,7 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
             return _cid, md.get("hotkeys", [])
         # If the filename exists, overwrite regardless if the content is different.
         elif filename_exists(current_user.username, filename=filename_no_ext):
-            incr = False # We will overwrite file content with the same name without warning. Do not increment file count.
+            pass # We will overwrite file content with the same name without warning. Do not increment file count.
 
         # Encrypt the data with the user_wallet, and send with the server_wallet
         if False:
