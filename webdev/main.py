@@ -170,8 +170,10 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
     splt = file.filename.split(os.path.extsep)
     filename_no_ext = splt[0]
 
+    raw_data = await file.read()
+
     # If exists, don't attempt to overwrite on the network.
-    _cid = generate_cid_string(file)
+    _cid = generate_cid_string(raw_data)
     if file_cid_exists(current_user.username, cid=_cid):
         # Just overwrite the metadata and return (e.g. rename the file, but don't change data on network)
         rename_file(
@@ -183,8 +185,6 @@ async def create_upload_file(file: UploadFile = File(...), current_user: User = 
         return _cid, md.get("hotkeys", [])
     elif filename_exists(current_user.username, filename=filename_no_ext):
         pass # We will overwrite file content with the same name without warning.
-
-    raw_data = await file.read()
 
     # Encrypt the data with the user_wallet, and send with the server_wallet
     if False:
@@ -237,8 +237,10 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
         splt = file.filename.split(os.path.extsep)
         filename_no_ext = splt[0]
 
+        raw_data = await file.read()
+
         # If cid exists, don't attempt to overwrite on the network but update the metadata.
-        _cid = generate_cid_string(file)
+        _cid = generate_cid_string(raw_data)
         if file_cid_exists(current_user.username, cid=_cid):
             # Just overwrite the metadata and return (e.g. rename the file, but don't change data on network)
             rename_file(
@@ -251,8 +253,6 @@ async def create_upload_files(files: List[UploadFile] = File(...), current_user:
         # If the filename exists, overwrite regardless if the content is different.
         elif filename_exists(current_user.username, filename=filename_no_ext):
             pass # We will overwrite file content with the same name without warning.
-
-        raw_data = await file.read()
 
         # Encrypt the data with the user_wallet, and send with the server_wallet
         if False:
