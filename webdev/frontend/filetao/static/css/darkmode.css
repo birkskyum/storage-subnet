@@ -1,0 +1,116 @@
+.dark-mode-toggle {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+}
+
+#toggle-dark-mode {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.slider {
+    position: relative;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    height: 26px;
+    width: 50px;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+#toggle-dark-mode:checked + .slider {
+    background-color: #2196F3;
+}
+
+#toggle-dark-mode:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+body.dark-mode {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-mode .navbar {
+    background-color: #121212;
+}
+
+body.dark-mode .navbar a {
+    color: white;
+}
+
+body.dark-mode .info {
+    background-color: #121212;
+}
+
+body.dark-mode .logo img {
+    content: url("../images/tao-dark.png");
+}
+
+body.dark-mode .upload-retrieve {
+    background-color: #121212;
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+body.dark-mode .upload-retrieve input {
+    border-color: #ffffff;
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-mode .file-upload {
+    border-color: #ffffff;
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-mode .form-container input[type="file"] {
+    color: #ffffff;
+}
+
+body.dark-mode .login-form {
+    background-color: #121212;
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+body.dark-mode .login-form input {
+    border-color: #ffffff;
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-mode .login-form input[type="button"], body.dark-mode .login-form input[type="submit"] {
+    color: white;
+    background-color: #121212;
+    border-top: 2px solid white;
+    border-bottom: 2px solid white;
+    background-image: linear-gradient(#2b2b2b, #2b2b2b), linear-gradient(#2b2b2b, #2b2b2b);
+}
+
+body.dark-mode .login-form input[type="button"]:hover, body.dark-mode .login-form input[type="submit"]:hover {
+    background-color: #121212;
+}

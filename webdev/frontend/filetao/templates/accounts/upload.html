@@ -3,20 +3,22 @@
 <head>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('file-upload').addEventListener('change', function() {
-                    var fileName = this.files[0] ? this.files[0].name : 'Choose file';
-                    document.getElementById('file-name').textContent = fileName;
-            });
-        });
-    </script>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/darkmode.css' %}">
+    <script src="{% static 'js/darkmode.js' %}" defer></script>
+    <script src="{% static 'js/upload.js' %}" defer></script>
 </head>
 <body>
+    <script>
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+    </script>
+    <div class="dark-mode-toggle">
+        <input type="checkbox" id="toggle-dark-mode">
+        <label for="toggle-dark-mode" class="slider"></label>
+    </div>
     <div class="logo">
-        {% load static %}
-        <img src="{% static 'images/logo.png' %}" alt="Logo">
+        <img alt="Logo">
     </div>
     <div class="line" style="width: 70%"></div>
     <div class="navbar">

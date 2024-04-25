@@ -17,8 +17,6 @@ from storage.api import StoreUserAPI, RetrieveUserAPI, get_query_api_axons
 from webdev.database import startup, get_database, get_user, create_user, get_server_wallet, get_metagraph
 from webdev.database import Token, TokenData, User, UserInDB, store_file_metadata, get_file_metadata
 
-os.environ['ACCESS_TOKEN_EXPIRE_MINUTES']='15'
-os.environ['ALGORITHM']='HS256'
 # Load the env configuration
 load_dotenv()
 
