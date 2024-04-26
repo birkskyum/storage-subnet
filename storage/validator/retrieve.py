@@ -76,7 +76,7 @@ async def handle_retrieve(self, uid):
         [axon],
         synapse,
         deserialize=False,
-        timeout=60,
+        timeout=100,
     )
 
     try:
@@ -322,7 +322,7 @@ async def retrieve_broadband(self, full_hash: str):
             axons,
             synapse,
             deserialize=False,
-            timeout=60,
+            timeout=100,
         )
 
         # Compute the rewards for the responses given proc time.
