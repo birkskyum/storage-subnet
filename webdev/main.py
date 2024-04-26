@@ -351,7 +351,7 @@ async def delete_user_data(filename: str, current_user: User = Depends(get_curre
     splt = filename.split(os.path.extsep)
     filename_no_ext = splt[0]
 
-    if not file_exists(current_user.username, filename=filename_no_ext):
+    if not filename_exists(current_user.username, filename=filename_no_ext):
         raise HTTPException(
             status_code=404, detail=f"File {filename} does not exist. Please check the filename."
         )
