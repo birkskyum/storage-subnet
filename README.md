@@ -71,6 +71,10 @@ Currently supporting `python>=3.9,<3.12`.
 
 ## Installation
 ```bash
+# Please install torch-cpu if you do not need a gpu. (GPU not required for FileTAO)
+pip install torch==2.3.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+# Clone and Install the FileTAO repo.
 git clone https://github.com/ifrit98/storage-subnet
 cd storage-subnet
 python -m pip install -e .

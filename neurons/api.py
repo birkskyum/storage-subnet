@@ -37,7 +37,7 @@ from storage.validator.state import should_checkpoint
 from storage.validator.encryption import encrypt_data, setup_encryption_wallet
 from storage.validator.store import store_broadband
 from storage.validator.retrieve import retrieve_broadband
-from storage.validator.database import retrieve_encryption_payload, get_ordered_metadata
+from storage.validator.database import retrieve_encryption_payload, get_ordered_metadata, delete_file_from_database
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import decrypt_data_with_private_key
 from storage.validator.dendrite import timed_dendrite
@@ -387,6 +387,43 @@ class neuron:
         )
 
         return priority
+
+    async def delete_user_data(self, synapse: protocol.DeleteUser) -> protocol.DeleteUser:
+        """
+        Asynchronously handles the deletion of user data from the network based on a given hash.
+        It deletes the data and updates the synapse object with the deletion status.
+
+        Parameters:
+            synapse (protocol.DeleteUser): An instance of the DeleteUser protocol class containing
+                                        the hash of the data to be deleted.
+
+        Returns:
+            protocol.DeleteUser: The updated instance of the DeleteUser protocol class with the
+                                deletion status.
+
+        Note:
+            - The function is part of a larger protocol for data deletion in a distributed network.
+            - It utilizes the 'delete_broadband' method to perform the actual data deletion based
+            on the provided data hash.
+            - The method logs the deletion process and the resulting status for monitoring and debugging.
+        """
+        metadata = await get_ordered_metadata(synapse.data_hash, self.database)
+
+        if not metadata:
+            bt.logging.warning(f"Hash {synapse.data_hash} does not exist on the network.")
+            return synapse
+
+        stored_payload = metadata.get("encryption_payload", "{}")
+        if stored_payload != json.loads(synapse.encryption_payload):
+            bt.logging.warning(
+                f"Encryption payload mismatch for hash {synapse.data_hash}. Not deleting data."
+            )
+            return synapse
+
+        await delete_file_from_database(synapse.data_hash, self.database)
+        synapse.deleted = True
+
+        return synapse
 
     def run(self):
         bt.logging.info("run()")
