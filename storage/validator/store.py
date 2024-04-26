@@ -137,7 +137,7 @@ async def store_encrypted_data(
             axons,
             synapse,
             deserialize=False,
-            timeout=60,
+            timeout=100,
         )
 
         # Compute the rewards for the responses given proc time.
@@ -340,7 +340,7 @@ async def store_broadband(
             axons,
             synapse,
             deserialize=False,
-            timeout=60,
+            timeout=100,
         )
 
         # Compute the rewards for the responses given proc time.
