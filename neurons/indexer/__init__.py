@@ -93,6 +93,11 @@ async def collect_and_insert_data(config):
     stats = get_miner_statistics(config)
     hotkeys = list(stats)
     caps = cache_hotkeys_capacity(hotkeys)
+    if caps == {}:
+        bt.logging.warning(
+            f"Indexer failed to retrieve hotkey capacities. Perhaps the redis db at {config.database.host}:{config.database.port} with db index {config.database.index} isn't connected properly? Returning..."
+        )
+        return
 
     substrate = get_substrate()
     incentives = substrate.query("SubtensorModule", "Incentive", [config.netuid])
