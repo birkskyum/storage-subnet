@@ -82,7 +82,7 @@ async def retrieve(
     subtensor: "bt.subtensor" = None,
     chain_endpoint: str = "finney",
     netuid: int = 21,
-    timeout: int = 60,
+    timeout: int = 100,
     uids: List[int] = None,
     hotkeys: List[str] = None,
     metadata_path: str = None,
