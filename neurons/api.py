@@ -42,6 +42,8 @@ from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import decrypt_data_with_private_key
 from storage.validator.dendrite import timed_dendrite
 
+from indexer import run_indexer_thread
+
 
 def MockDendrite():
     pass
@@ -517,7 +519,9 @@ class neuron:
 
 
 def run_api():
-    neuron().run()
+    neuron_obj = neuron()
+    run_indexer_thread(neuron_obj.config)
+    neuron_obj.run()
 
 
 if __name__ == "__main__":
