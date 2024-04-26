@@ -36,7 +36,7 @@ class DeleteUserAPI(bt.SubnetsAPI):
         self.netuid = 21
 
     def prepare_synapse(self, cid: str, encryption_payload: Dict[str, Any]) -> DeleteUser:
-        encrpytion_payload_json = json.dumps(encryption_payload)
+        encryption_payload_json = json.dumps(encryption_payload)
         synapse = DeleteUser(data_hash=cid, encryption_payload=encryption_payload_json)
         return synapse
 
