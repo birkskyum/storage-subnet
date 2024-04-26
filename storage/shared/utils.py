@@ -152,7 +152,7 @@ def get_redis_password(
                 text=True,
             ).strip()
         except Exception as e:
-            bt.logging.error(
+            bt.logging.warning(
                 f"No Redis password set in Redis config file: {redis_conf}"
             )
     if redis_password == "" or redis_password is None:
