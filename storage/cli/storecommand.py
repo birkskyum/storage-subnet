@@ -27,6 +27,7 @@ from storage.validator.encryption import encrypt_data
 from storage.validator.cid import generate_cid_string
 from storage.shared.ecc import hash_data
 from storage.api.store_api import store
+from storage.shared.utils import get_coldkey_wallets_for_path, get_hash_mapping, save_hash_mapping
 
 import bittensor
 
@@ -43,51 +44,6 @@ bittensor.trace()
 # Create a console instance for CLI display.
 console = bittensor.__console__
 
-
-def get_coldkey_wallets_for_path(path: str) -> List["bittensor.wallet"]:
-    try:
-        wallet_names = next(os.walk(os.path.expanduser(path)))[1]
-        return [bittensor.wallet(path=path, name=name) for name in wallet_names]
-    except StopIteration:
-        # No wallet files found.
-        wallets = []
-    return wallets
-
-
-def get_hash_mapping(hash_file, filename):
-    try:
-        with open(os.path.expanduser(hash_file), "r") as file:
-            hashes = json.load(file)
-            return hashes.get(filename)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return None
-
-
-def save_hash_mapping(hash_file: str, filename: str, data_hash: str, hotkeys: List[str]):
-    base_dir = os.path.basename(hash_file)
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir)
-
-    try:
-        with open(hash_file, "r") as file:
-            hashes = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        hashes = {}
-
-    hashes[filename] = data_hash
-    hashes[filename + "_hotkeys"] = hotkeys
-
-    with open(hash_file, "w") as file:
-        json.dump(hashes, file)
-
-
-def list_all_hashes(hash_file):
-    try:
-        with open(hash_file, "r") as file:
-            hashes = json.load(file)
-            return hashes
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
 
 
 class StoreData:

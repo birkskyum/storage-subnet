@@ -57,7 +57,7 @@ async def test_storage_primitives():
     retrieve_handler = RetrieveUserAPI(wallet)
     rdata = await retrieve_handler(
         axons=axons,
-        # Arugmnts for the proper synapse
+        # Arguments for the proper synapse
         cid=cid,
         timeout=60,
     )

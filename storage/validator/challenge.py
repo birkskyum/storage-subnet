@@ -122,7 +122,7 @@ async def handle_challenge(self, uid: int) -> typing.Tuple[bool, protocol.Challe
         [axon],
         synapse,
         deserialize=True,
-        timeout=30,
+        timeout=45,
     )
     verified = verify_challenge_with_seed(response[0], synapse.seed)
 

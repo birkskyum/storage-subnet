@@ -17,19 +17,24 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import os
 import torch
 import base64
 import random
+import asyncio
 import bittensor as bt
 from abc import ABC, abstractmethod
 from typing import Any, List, Union
 from storage.protocol import StoreUser
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import encrypt_data
+from storage.api.base import Subnet21API
 from storage.api.utils import get_query_api_axons
+from storage.cli.default_values import defaults
+from storage.shared.utils import get_coldkey_wallets_for_path, get_hash_mapping, save_hash_mapping
 
 
-class StoreUserAPI(bt.SubnetsAPI):
+class StoreUserAPI(Subnet21API):
     def __init__(self, wallet: "bt.wallet"):
         super().__init__(wallet)
         self.netuid = 21
@@ -96,8 +101,12 @@ async def store(
     ttl: int = 60 * 60 * 24 * 30,
     encrypt: bool = False,
     encoding: str = "utf-8",
-    timeout: int = 60,
+    timeout: int = 100,
     uid: int = None,
+    metadata_path: str = None,
+    name: str = None,
+    max_retries: int = 3,
+    backoff_factor: float = 2.0,
 ):
 
     """
@@ -114,31 +123,49 @@ async def store(
         encoding (str, optional): The encoding of the data. Defaults to "utf-8".
         timeout (int, optional): The timeout in seconds for storing data. Defaults to 60.
         uid (int, optional): The UID of a specific API node to use for storing data. Defaults to None.
+        metadata_path (str, optionla): The path to store the metadata object for associating hotkeys.
+        name (str, optional): String name of the data to associate with metadata.
 
     Returns:
         str: The CID of the stored data.
         hotkeys: The hotkeys of the successfully stored data.
     """
-    store_handler = StoreUserAPI(wallet)
+    retry_count = 0
+    delay = 2
 
-    subtensor = subtensor or bt.subtensor(chain_endpoint)
-    metagraph = subtensor.metagraph(netuid=netuid)
+    while retry_count <= max_retries:
+        try:
+            store_handler = StoreUserAPI(wallet)
+            subtensor = subtensor or bt.subtensor(chain_endpoint)
+            metagraph = subtensor.metagraph(netuid=netuid)
 
-    uids = None
-    if uid is not None:
-        uids = [uid]
+            uids = [uid] if uid is not None else None
+            all_axons = await get_query_api_axons(wallet=wallet, metagraph=metagraph, uids=uids)
+            axons = random.choices(all_axons, k=min(3, len(all_axons)))
 
-    all_axons = await get_query_api_axons(wallet=wallet, metagraph=metagraph, uids=uids)
-    axons = random.choices(all_axons, k=3)
+            cid, hotkeys = await store_handler(
+                axons=axons,
+                data=data,
+                encrypt=encrypt,
+                ttl=ttl,
+                encoding=encoding,
+                uid=uid,
+                timeout=timeout,
+            )
 
-    cid, hotkeys = await store_handler(
-        axons=axons,
-        data=data,
-        encrypt=encrypt,
-        ttl=ttl,
-        encoding=encoding,
-        uid=uid,
-        timeout=timeout,
-    )
+            if cid != "" and hotkeys:
+                metadata_path = os.path.expanduser(metadata_path or defaults.hash_basepath)
+                hash_filepath = os.path.join(metadata_path, wallet.name + ".json")
+                if not os.path.exists(hash_filepath):
+                    os.makedirs(hash_filepath)
 
-    return cid, hotkeys
+                save_hash_mapping(hash_filepath, name or cid, cid, hotkeys)
+                return cid, hotkeys
+        except Exception as e:
+            print(f"Attempt {retry_count + 1} failed: {str(e)}")
+
+        await asyncio.sleep(delay)
+        delay *= backoff_factor
+        retry_count += 1
+
+    raise Exception("Maximum retry limit reached without success.")

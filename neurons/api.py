@@ -40,6 +40,7 @@ from storage.validator.retrieve import retrieve_broadband
 from storage.validator.database import retrieve_encryption_payload, get_ordered_metadata, delete_file_from_database
 from storage.validator.cid import generate_cid_string
 from storage.validator.encryption import decrypt_data_with_private_key
+from storage.validator.dendrite import timed_dendrite
 
 
 def MockDendrite():
@@ -79,8 +80,14 @@ class neuron:
         bt.logging(config=self.config, logging_dir=self.config.neuron.full_path)
         print(self.config)
 
+        redis_password = get_redis_password(self.config.database.redis_password)
         try:
-            asyncio.run(check_environment(self.config.database.redis_conf_path))
+            asyncio.run(check_environment(
+                self.config.database.redis_conf_path,
+                self.config.database.host,
+                self.config.database.port,
+                redis_password
+            ))
         except AssertionError as e:
             bt.logging.warning(
                 f"Something is missing in your environment: {e}. Please check your configuration, use the README for help, and try again."
@@ -131,7 +138,6 @@ class neuron:
 
         # Setup database
         bt.logging.info("loading database")
-        redis_password = get_redis_password(self.config.database.redis_password)
         self.database = aioredis.StrictRedis(
             host=self.config.database.host,
             port=self.config.database.port,
@@ -150,7 +156,7 @@ class neuron:
         self.my_subnet_uid = self.metagraph.hotkeys.index(
             self.wallet.hotkey.ss58_address
         )
-        bt.logging.info(f"Running validator on uid: {self.my_subnet_uid}")
+        bt.logging.info(f"Running validator (api) on uid: {self.my_subnet_uid}")
 
         bt.logging.debug("serving ip to chain...")
         try:
@@ -186,7 +192,7 @@ class neuron:
         if self.config.neuron.mock:
             self.dendrite = MockDendrite()  # TODO: fix this import error
         else:
-            self.dendrite = bt.dendrite(wallet=self.wallet)
+            self.dendrite = timed_dendrite(wallet=self.wallet)
         bt.logging.debug(str(self.dendrite))
 
         # Init the event loop.
@@ -281,18 +287,21 @@ class neuron:
         )
 
     async def store_priority(self, synapse: protocol.StoreUser) -> float:
-        if synapse.dendrite.hotkey in self.metagraph.hotkeys:
-            caller_uid = self.metagraph.hotkeys.index(
-                synapse.dendrite.hotkey
-            )  # Get the caller index.
-            priority = float(
-                self.metagraph.S[caller_uid]
-            )  # Return the stake as the priority.
-        else:
-            priority = 1 # TODO: find a good default value for this
+        if self.config.api.open_access:
+            return 1.0
+
+        caller_uid = self.metagraph.hotkeys.index(
+            synapse.dendrite.hotkey
+        )  # Get the caller index.
+
+        priority = float(
+            self.metagraph.S[caller_uid]
+        )  # Return the stake as the priority.
+
         bt.logging.trace(
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", priority
         )
+
         return priority
 
     async def retrieve_user_data(
@@ -362,15 +371,21 @@ class neuron:
         )
 
     async def retrieve_priority(self, synapse: protocol.RetrieveUser) -> float:
+        if self.config.api.open_access:
+            return 1.0
+
         caller_uid = self.metagraph.hotkeys.index(
             synapse.dendrite.hotkey
         )  # Get the caller index.
+
         priority = float(
             self.metagraph.S[caller_uid]
         )  # Return the stake as the priority.
+
         bt.logging.trace(
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", priority
         )
+
         return priority
 
     async def delete_user_data(self, synapse: protocol.DeleteUser) -> protocol.DeleteUser:

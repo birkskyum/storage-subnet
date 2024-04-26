@@ -56,12 +56,12 @@ def set_weights(
         weights (torch.Tensor): weights to sent for UIDs on the network.
         metagraph (bt.metagraph): Bittensor metagraph.
         wandb_on (bool, optional): Flag to determine if logging to Weights & Biases is enabled. Defaults to False.
-        wait_for_inclusion (bool, optional): Wether to wait for the extrinsic to enter a block.
-        wait_for_finalization (bool, optional): Wether to wait for the extrinsic to be finalized on the chain.
+        wait_for_inclusion (bool, optional): Whether to wait for the extrinsic to enter a block.
+        wait_for_finalization (bool, optional): Whether to wait for the extrinsic to be finalized on the chain.
 
     Returns:
         success (bool):
-            flag is true if extrinsic was finalized or uncluded in the block.
+            flag is true if extrinsic was finalized or included in the block.
             If we did not wait for finalization / inclusion, the response is true.
         message (str):
             message returned by the chain.

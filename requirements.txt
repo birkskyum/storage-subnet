@@ -7,7 +7,6 @@ torch>=1.13.1 ; sys_platform != 'linux' or platform_machine != 'x86_64'
 bcrypt==3.2.0
 bittensor==6.9.3 # should install torch without cuda and bypass bittensor req
 redis==5.0.1
-aioredis==2.0.1
 pycryptodome==3.19.1
 pyinstrument==4.6.1
 wandb==0.16.0
