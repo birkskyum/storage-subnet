@@ -35,7 +35,7 @@ def get_redis(config=None):
         connection_pool=connection_pool
     )
 
-def get_miner_statistics(config: "bittensor.config" = None):
+def get_miner_statistics(config = None):
     database = get_redis(config)
     stats = {}
     for key in database.scan_iter(b"stats:*", count=10_000):
@@ -105,7 +105,7 @@ def total_hotkey_storage(
     return total_storage
 
 def cache_hotkeys_capacity(
-    hotkeys: List[str], verbose: bool = False, config: "bittensor.config" = None
+    hotkeys: List[str], verbose: bool = False, config = None
 ) -> Dict[str, Tuple[int, Optional[int]]]:
     """
     Caches the capacity information for a list of hotkeys.
