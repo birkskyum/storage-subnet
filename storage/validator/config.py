@@ -317,13 +317,13 @@ def add_args(cls, parser):
         "--api.store_timeout",
         type=int,
         help="Store data query timeout.",
-        default=60,
+        default=600,
     )
     parser.add_argument(
         "--api.retrieve_timeout",
         type=int,
         help="Retrieve data query timeout.",
-        default=60,
+        default=600,
     )
     parser.add_argument(
         "--api.ping_timeout",
