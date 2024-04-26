@@ -31,7 +31,7 @@ class Subnet21API(ABC):
         self,
         axons: Union[bt.axon, List[bt.axon]],
         deserialize: Optional[bool] = False,
-        timeout: Optional[int] = 12,
+        timeout: Optional[int] = 600,
         n: Optional[float] = 0.1,
         uid: Optional[int] = None,
         **kwargs: Optional[Any],
