@@ -101,7 +101,7 @@ async def store(
     ttl: int = 60 * 60 * 24 * 30,
     encrypt: bool = False,
     encoding: str = "utf-8",
-    timeout: int = 60,
+    timeout: int = 100,
     uid: int = None,
     metadata_path: str = None,
     name: str = None,
