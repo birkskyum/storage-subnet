@@ -90,7 +90,7 @@ INSERT INTO HotkeysTable (
 """
 
 async def collect_and_insert_data(config):
-    stats = get_miner_statistics()
+    stats = get_miner_statistics(config)
     hotkeys = list(stats)
     caps = cache_hotkeys_capacity(hotkeys)
 

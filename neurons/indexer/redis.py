@@ -7,13 +7,24 @@ from storage.shared.utils import get_redis_password
 
 connection_pool = None
 
-def get_redis():
+def get_redis(config=None):
     global connection_pool
     if not connection_pool:
+        if config:
+            host = config.database.host
+            db_index = config.database.index
+            port = config.database.port
+        else:
+            db_index = 1
+            port = 6379
+            host = "localhost"
+        print("db_index:", db_index)
+        print("host:", host)
+        print("port:", port)
         connection_pool = ConnectionPool(
-            host='localhost',
-            port=6379,
-            db=13,
+            host=host,
+            port=port,
+            db=db_index,
             password=get_redis_password(),
             decode_responses=False,
             # socket_connect_timeout=5,
@@ -24,8 +35,8 @@ def get_redis():
         connection_pool=connection_pool
     )
 
-def get_miner_statistics():
-    database = get_redis()
+def get_miner_statistics(config: "bittensor.config" = None):
+    database = get_redis(config)
     stats = {}
     for key in database.scan_iter(b"stats:*", count=10_000):
         # Await the hgetall call and then process its result
@@ -94,7 +105,7 @@ def total_hotkey_storage(
     return total_storage
 
 def cache_hotkeys_capacity(
-    hotkeys: List[str], verbose: bool = False
+    hotkeys: List[str], verbose: bool = False, config: "bittensor.config" = None
 ) -> Dict[str, Tuple[int, Optional[int]]]:
     """
     Caches the capacity information for a list of hotkeys.
@@ -106,7 +117,7 @@ def cache_hotkeys_capacity(
     Returns:
         dict: A dictionary with hotkeys as keys and a tuple of (total_storage, limit) as values.
     """
-    database = get_redis()
+    database = get_redis(config)
     hotkeys_capacity = {}
 
     for hotkey in hotkeys:
@@ -153,21 +164,30 @@ def get_hashes_for_hotkey(
 def tier_statistics(by_tier: bool = False) -> Dict[str, Dict[str, int]]:
     tier_counts = {
         "Super Saiyan": 0,
+        "Ruby": 0,
+        "Emerald": 0,
         "Diamond": 0,
+        "Platinum": 0,
         "Gold": 0,
         "Silver": 0,
         "Bronze": 0,
     } 
     tier_capacity = {
         "Super Saiyan": 0,
+        "Ruby": 0,
+        "Emerald": 0,
         "Diamond": 0,
+        "Platinum": 0,
         "Gold": 0,
         "Silver": 0,
         "Bronze": 0,
     }
     tier_usage = {
         "Super Saiyan": 0,
+        "Ruby": 0,
+        "Emerald": 0,
         "Diamond": 0,
+        "Platinum": 0,
         "Gold": 0,
         "Silver": 0,
         "Bronze": 0,
