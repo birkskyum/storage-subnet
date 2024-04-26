@@ -156,12 +156,12 @@ def get_redis_password(
                 f"No Redis password set in Redis config file: {redis_conf}"
             )
     if redis_password == "" or redis_password is None:
-        bt.logging.error(
+        bt.logging.warning(
             "Redis password not found! This must be set as either an env var `REDIS_PASSWORD`, passed via CLI in `--database.redis_pasword`, or parsed from /etc/redis/redis.conf."
             "Please ensure it is set by running `. ./scripts/redis/set_redis_password.sh` and try again."
             f"You may also run: `sudo grep -Po '^requirepass \K.*' {redis_conf}` to discover this manually and pass to the cli."
         )
-        exit(1)
+        return None
 
     return redis_password
 
