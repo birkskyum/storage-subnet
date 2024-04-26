@@ -101,6 +101,7 @@ async def collect_and_insert_data(config):
         cur, cap = caps[hotkey]
         n_hashes = len(get_hashes_for_hotkey(hotkey))
         uid = substrate.query("SubtensorModule", "Uids", [config.netuid, hotkey]).value
+        if uid is None: continue # Skip this miner, it's no longer registered
         incentive = incentives[uid].value
         row = [hotkey, incentive, stat['tier'], cur, cap, cur / cap, n_hashes, stat['total_successes'], stat['store_successes'], stat['store_attempts'], stat['challenge_successes'], stat['challenge_attempts'], stat['retrieve_successes'], stat['retrieve_attempts']]
         print(f"Inserting row for hotkey statistics: {row}")
