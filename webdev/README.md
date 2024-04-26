@@ -23,3 +23,6 @@ You can use the reamde with a simple uvicorn server:
 ```bash
 uvicorn main:app --port PORT --reload
 ```
+
+## Extended usage
+You may choose to host this backend with a service like heroku, or choose to self-host. All the tools and primitives are available, and provided "as-is".
