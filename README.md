@@ -53,17 +53,21 @@ Currently supporting `python>=3.9,<3.12`.
    - [Challenge Phase](#challenge-phase)
    - [Retrieval Phase](#retrieval-phase)
 8. [Reward System](#reward-system)
+   - [Overview and Justification](#overview-and-justification)
    - [Speed and Reliability in Decentralized Storage Mining](#speed-and-reliability-in-decentralized-storage-mining)
+   - [Viewing Wandb Runs](#viewing-wandb-runs)
 9. [Epoch UID Selection](#epoch-uid-selection)
 10. [Running FileTAO](#running-filetao)
     - [Running a Miner](#running-a-miner)
     - [Running a Validator](#running-a-validator)
     - [Running the API](#running-the-api)
     - [Setup WandB](#setup-wandb)
+    - [Testnet](#testnet)
 11. [Local Subtensor](#local-subtensor)
 12. [Database Schema Migration](#database-schema-migration)
 13. [Disable RDB](#disable-rdb)
-
+14. [FileTAO Docker](#filetao-docker)
+15. [Demos](#demo-notebooks-and-examples)
 
 ## Installation
 ```bash
@@ -117,33 +121,11 @@ Nov 16 22:35:42 user systemd[1]: Started Advanced key-value store.
 
 In order to securely run a node, whether a miner or validator, you must run ensure your redis instance is secure from the outside internet and is password-protected.
 
-The following steps are **mandatory** for secure communication on the network:
+The following steps are **recommended** for secure communication on the network and data integrity:
 
-1. Closing the default redis port
 1. Password protecting redis
-1. Enabling persistence
+1. Enabling redis persistence
 
-#### Close external traffic to Redis 
-
-> Note: **EXPOSING THE REDIS PORT IS A MAJOR SECURITY RISK**
-
-This Bash script is designed to configure UFW (Uncomplicated Firewall) to manage access to default Redis port 6379. The script's primary function is to block all external traffic to port 6379, typically used by Redis, while allowing local processes to still access this port.
-
-##### Usage
-To run the script, use the following command in the terminal:
-```bash
-sudo ./scripts/redis/create_redis_firewall.sh
-```
-Running this script will:
-- Check if UFW is installed and active. If UFW is not active, the script will attempt to enable it.
-- Set UFW rules to deny all external access to port 6379.
-- Set UFW rules to allow all local access to port 6379.
-- Apply the changes by reloading UFW.
-
-##### Important Considerations
-- **Test Before Production**: Always test the script in a controlled environment before deploying it in a production setting.
-- **Existing Rules**: If there are existing rules for port 6379, review the script to ensure compatibility.
-- **Firewall Management**: This script is specifically for systems using UFW. If another firewall management tool is in use, this script will not be compatible.
 
 #### Automated Redis Password Configuration
 To enhance security, our system now automatically generates a strong password for Redis. This is **REQUIRED**. This is handled by the `set_redis_password.sh` script. Follow these steps to set up Redis with an automated password:
@@ -244,14 +226,14 @@ wallet = bt.wallet()
 subtensor = bt.subtensor()
 
 data = b"Some bytestring data!"
-cid, hotkeys = await store(data, wallet, subtensor, netuid=22)
+cid, hotkeys = await store(data, wallet, subtensor, netuid=21)
 print("Stored {} with {} hotkeys".format(cid, hotkeys))
 > Stored bafkreid6mhmfptdpfvljyavss77zmo6b2oert2pula2gy4tosekupm4nqa with validator hotkeys [5CaFuijc2ucdoWhkjLaYgnzYrpv62KGt1fWWtUxhFHXPA3KK, 5FKwbwguHU1SVQiGot5YKSTQ6fWGVv2wRHFrWfwp9X9nWbyU]
 ```
 
 Now you can retrieve the data using the content identifier `CID` and the `hotkey`s directly:
 ```python
-data = await retrieve(cid, wallet, subtensor, netuid=22, hotkeys=hotkeys)
+data = await retrieve(cid, wallet, subtensor, netuid=21, hotkeys=hotkeys)
 print(data)
 > b"Some bytestring data!"
 ```
@@ -593,9 +575,28 @@ In each phase, cryptographic primitives like hashing, commitment schemes (e.g., 
 
 ## Reward System
 
+There are several components to the reward mechanism and is multi-layered. In a nutshell, the goals are as follows:
+
+- Incentivize data durability and salience via cryptographic proof system. (E.g. don't lose data.)
+- Incentivize good performance over a long period of time. (Tier system to reward based on reputation.)
+- Incentivize fast response times. We want to retrieve user data quickly and ensure that it is over high network bandwidth.
+
 In FileTAO's decentralized storage system, optimal behavior is crucial for the overall health and efficiency of the network. Miners play a vital role in maintaining this ecosystem, and their actions directly impact their rewards and standing within the subnet. We have implemented a tier-based reward system to encourage proper behavior, successful challenge completions, and consistent performance.
 
 Failing to pass either challenge or retrieval verifications incur negative rewards. This is doubly destructive, as rolling statistics are continuously logged to periodically compute which tier a given miner hotkey belongs to. When a miner achieves the threshold for the next tier, the rewards that miner receives proportionally increase. Conversely, when a miner drops below the threshold of the previous tier, that miner's rewards are slashed such that they receive rewards proportionally to the immediately lower tier.
+
+### Overview and Justification
+FileTAO's Multi-dimensional reward mechanism is spread across 4 main axes:
+(1) Availability: Is the miner reachable when requested? Incentivizes uptime.
+(2) Speed (performant): how fast was the normalized response time?
+(3) Correctness (reliable): did the proof succeed? y/n
+(4) Trustworthiness (correctness over time): Tier definitions encapsulate consistenty and trustworthiness over time. A miner that rarely fails challenges and faithfully returns data when requested will receive an initial higher proportional reward.
+
+The main drivers behind the reward mechanism are to model meritocratic systems as seen in the academic realm and in the business world that scales trust across time and observation of output. For example, we create various "tiers" in education, Undergraduate, Masters, PhD, Post Doc, or in software, Junior Engineer, Senior Engineer, Principal Engineer, Staff Engineer, etc where each subsequent level achieved has proportionally greater expecetations on performance and qualification of the individual. 
+
+However, performance of the individual must match the expectations of the pedigree, and behavior that is inconsistent with a given level will be adjusted. If, for example, a Junior Engineer proves their output is substantial and over time completes projects that provide value, that engineer will be promoted to Senior Engineer over time, and pontentially beyond. Conversely, a Principal Engineer that consistently underperforms expectations will be demoted to a role with lower expectations until able to prove otherwise. The same logic applies to miners in FileTAO (SN21).
+
+Tier (class) mobility is at the heart of the mechanism, and provides a balance between competition and trust, where over time competitiveness breeds a degree of trust on which we can associate a degree of reliability with a given entity (or miner).
 
 **Why Optimal Behavior Matters:**
 1. **Reliability:** Miners who consistently store, retrieve, and pass challenges with high Wilson Scores ensure the reliability and integrity of the network.
@@ -608,7 +609,10 @@ Failing to pass either challenge or retrieval verifications incur negative rewar
 - **Higher Rewards for Higher Tiers:** Miners in higher tiers receive a greater proportion of the rewards, reflecting their superior performance and contribution to the network.
 
 ### **Wilson Score**
-A measure of confidence is required to assess reliability in low sample environments. For miners who have less history, it is unfair to expect perfection early on and is account for by using a statistical tool, the `Wilson Score`. 
+
+A measure of confidence is required to assess reliability in low sample environments. For miners who have less history, it is unfair to expect perfection early on and is account for by using a statistical tool, the `Wilson Score`. An asymmetric approximation of the confidence interval suited for low sample sizes given a particular z-score target, the `Wilson score` doesn't suffer from problems of overshoot and zero-width intervals that afflict the normal interval approximation.
+
+See: https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval for more information.
 
 For example, if a miner succeeds 4/5 times, it has a success rate of 80%. However it may not be indicative of true performance and reliability. Thus we have added Wilson Scores to accomodate low sample populations to get a more balanced approach to scoring miners.
 
@@ -616,18 +620,14 @@ This effectively allows for forgiveness for early failures and facilitates miner
 
 The equivalent wilson score for 4 of 5 attempts is `0.77`, which indicates with 95% statistical confidence that this miner is AT least this successful 80% of the time. Functionally, this allows for lowering of the tier requirements while having statistical confidence that over time, the miner may continue to improve performance from there while being considered reliable.
 
-**Moving Up Tiers:**
-- To ascend to a higher tier, a miner must maintain high Wilson Scores and achieve a set number of total successes.
-- This progression system incentivizes continuous improvement and excellence in mining operations.
+More concretely, given `N` trials, the wilson score establishes a lower bound for the confidence interval on miner success rates given low sample or population sizes. E.g., if a miner responds successfuly 8 of 9 times, it's lower bound on success rate is roughly `0.8701769999681506`. In other words, `wilson_score(8,9) == 0.8701769999681506`, suggesting that 87% of the time, this miner is expected to succeed on average. 
 
-**Graphical Representation:**
-- The graph below illustrates how rewards increase as miners advance through the tiers. It visually represents the potential growth in earnings as miners optimize their operations and maintain high standards of performance.
+This calculation is used as the lower bound to determine tier eligibility and establishes a "minimium trust level" for the miner. If a miner continues to have failed challenges, the wilson score lower bound will cross below the current tier threshold, and when the tiers are recalculated, that miner will move down a tier (e.g. `Diamond -> Gold`.)
 
-<div align="center">
-   <img src="assets/reward-tiers-vert.png" alt="Bonding Curves" width="650"/>
-</div>
+### **monitor**
+Miners are also incentivized to be available, and are punshed for not being online, (e.g. failed `n` pings) by the `monitor` protocol. Periodically (every `m` steps) validators ping a set of `k` miners (default is 40), and after 5 successive failed attempts to ping a specific UID, that miner will be negatively rewarded for unavailability.
 
-#### Tier System:
+### Tier System:
 The tier system classifies miners into five distinct categories, each with specific requirements and storage limits. These tiers are designed to reward miners based on their performance, reliability, and the total volume of data they can store.
 
 Importance of Tier System:
@@ -637,48 +637,64 @@ Importance of Tier System:
 
 1. 🎇 **Super Saiyan Tier:** 
    - **Storage Limit:** 1 Exabyte (EB)
-   - **Store Wilson Score:** 0.88
-   - **Minimum Successes Required:** 10,000
+   - **Store Wilson Score:** 0.9
+   - **Minimum Successes Required:** 15,000
    - **Reward Factor:** 1.0 (100% rewards)
 
-2. 💎 **Diamond Tier:**
-   - **Storage Limit:** 1 Petabyte (PB)
-   - **Store Wilson Score:**  0.77
-   - **Minimum Successes Required:** 5,000
-   - **Reward Factor:** 0.9 (90% rewards)
+2. 🌹 **Ruby Tier**
+   - **Storage Limit:** 100 Petabytes (PB)
+   - **Store Wilson Score:** 0.85
+   - **Minimum Successes Required:** 10,000
+   - **Rewrd Factor:** 0.9 (90% rewards)
 
-3. 🥇 **Gold Tier:**
-   - **Storage Limit:** 100 Terabytes (TB)
-   - **Store Wilson Score:** 0.66
-   - **Minimum Successes Required:** 2,000
+3. 🔮 **Emerald Tier**
+   - **Storage Limit:** 10 Petabytes (PB)
+   - **Store Wilson Score:** 0.8
+   - **Minimum Successes Required:** 8,000
+   - **Rewrd Factor:** 0.85 (85% rewards)
+
+4. 💠 **Diamond Tier:**
+   - **Storage Limit:** 1 Petabyte (PB)
+   - **Store Wilson Score:**  0.75
+   - **Minimum Successes Required:** 6,000
    - **Reward Factor:** 0.8 (80% rewards)
 
-4. 🥈 **Silver Tier:**
-   - **Storage Limit:** 10 Terabytes (TB)
-   - **Store Wilson Score:** 0.55
-   - **Minimum Successes Required:** 1,000
+5. 🔗 **Platinum Tier**
+   - **Storage Limit:** 500 Terabytes (TB)
+   - **Store Wilson Score:** 0.65
+   - **Minimum Successes Required:** 4,000
+   - **Reward Factor:** 0.75 (75% rewards) 
+
+6. 🥇 **Gold Tier:**
+   - **Storage Limit:** 200 Terabytes (TB)
+   - **Store Wilson Score:** 0.65
+   - **Minimum Successes Required:** 2,000
    - **Reward Factor:** 0.7 (70% rewards)
 
-5. 🥉 **Bronze Tier:**
-   - **Storage Limit:** 1 Terabyte (TB)
+7. 🥈 **Silver Tier:**
+   - **Storage Limit:** 50 Terabytes (TB)
+   - **Store Wilson Score:** 0.6
+   - **Minimum Successes Required:** 500
+   - **Reward Factor:** 0.65 (65% rewards)
+
+8. 🥉 **Bronze Tier:**
+   - **Storage Limit:** 10 Terabytes (TB)
    - **Store Wilson Score:** Not specifically defined for this tier
    - **Minimum Successes Required:** Not specifically defined for this tier
    - **Reward Factor:** 0.6 (60% rewards)
 
 #### Maintaining and Advancing Tiers:
 - To advance to a higher tier, miners must consistently achieve the required minimum Wilson Scores in their operations.
-- Periodic evaluations are conducted to ensure miners maintain the necessary performance standards to stay in their respective tiers.
-- Advancing to a higher tier takes time. In order to ascend to the first higher tier (Silver), it takes at least 1000 successful requests, whether they are challenge requests, store requests, or retry requests and must maintain a 95% Wilson Score in all categories. 
-- Depending on how often a miner is queried, how many validators are operating at one given time, and primarily the performance of the miner, this can take several hours to several days. Assuming full 64 validator slots are occupied, this should take a matter of hours.
+- Periodic evaluations are conducted to ensure miners maintain the necessary performance standards to stay in their respective tiers, or move up or down tiers.
+- Advancing to a higher tier takes time. In order to ascend to the first higher tier (Silver), it takes at least 1000 successful requests, whether they are challenge requests, store requests, or retry requests and must maintain the minimum Wilson Score for successes / attempts. 
+- Depending on how often a miner is queried, how many validators are operating at one given time, and primarily the performance of the miner, this can take several hours to several days. Assuming full 64 validator slots are occupied, this should take ~100 hours.
 
-Here is a distribution of UIDs queried over 1000 blocks based on block hash:
-![uid-dist](assets/uid_dist.png)
+As miners move up tiers, their responsibility increases proportionally. Thus, miners who move from Silver -> Gold are expected to be able to store up to 100 Terabytes (TB) of data, a 10x the storage cap for Silver. Similarly, it must maintain a minimum wilson score of 0.66 over it's lifetime, increasing the lower bound for expected performance and reliability. It also means that this miner will now receive a higher percentage of rewards for each successful query, going from 70% -> 80%. This does not mean that the miner may rest on its laurels, and may move right back down a tier (or more) if it does not meed the minimum requirements for Gold.
 
 Assuming perfect performance, that out of ~200 miner UIDs, each of which is queried roughly 34 times every 1000 rounds, namely a 3.4% chance every query round, one can expect to reach the next tier within 
-
 ```bash
 hours = total_successes / prob_of_query_per_round * time_per_round / 3600
-hours = 98 # roughly 4 days at perfect performance to top tier (no challenge failures)
+hours = 98 # roughly 4 days at perfect performance to next (Silver) tier (assuming no challenge failures)
 ```
 
 #### Miner Advancement Program
@@ -687,9 +703,12 @@ The top two (2) performers per batch of `store`, `challenge` or `retrieve` reque
 ```bash
 TIER_BOOSTS = {
     b"Super Saiyan": 1.02, # 2%  -> 1.02
-    b"Diamond": 1.05,      # 5%  -> 0.945
-    b"Gold": 1.1,          # 10% -> 0.88
-    b"Silver": 1.15,       # 15% -> 0.805
+    b"Ruby": 1.04,         # 4%  -> 0.936
+    b"Emerald": 1.05,      # 6%  -> 0.918
+    b"Diamond": 1.08,      # 8%  -> 0.864
+    b"Platinum": 1.1,      # 10% -> 0.825
+    b"Gold": 1.12,         # 12% -> 0.784
+    b"Silver": 1.16,       # 16% -> 0.754
     b"Bronze": 1.2,        # 20% -> 0.72
 }
 ```
@@ -702,11 +721,12 @@ Bronze  -> 0.72 = 0.6 * 1.0 * 1.2
 Diamond -> 0.84 = 0.8 * 1.0 * 1.05
 ```
 
-This mechansim *significantly* closes the gap for newer miners who perform well and should be able to ascned the tier structure honestly and faithfully.
+This mechanism *significantly* closes the gap for newer miners who perform well and should be able to ascend the tier structure honestly and faithfully. This is such that miners who consistently perform well but are lower tiers can more readily survive immunity period to make it to successively higher tiers and not "gate" access to the older miners. This directly negates the "grandfathering" effect. Higher tier miners that are in the top 2 are boosted significantly less than those Bronze or lower tier miners who make the top 2.
+
 
 #### Periodic Statistics Rollover
 
-Statistics for `store_successes/attempts`, `challenge_attempts/successes`, and `retrieve_attempts/successes` are reset every epoch, while the `total_successes` are carried over for accurate tier computation. This "sliding window" of the previous 360 blocks of `N` successes vs `M` attempts effectively resets the `N / M` ratio and applies Wilson Scoring. This facilitates a less punishing tier calculation for early failures that then have to be "outpaced", while simultaneously discouraging grandfathering in of older miners who were able to succeed early and cement their status in a higher tier. The net effect is greater mobility across the tiers, keeping the network competitive while incentivizing reliability and consistency.
+Statistics for `store_successes/attempts`, `challenge_attempts/successes`, and `retrieve_attempts/successes` are reset every 2 epochs (720 blocks), while the `total_successes` are carried over for accurate tier computation. This "sliding window" of the previous 720 blocks of `N` successes vs `M` attempts effectively resets the `N / M` ratio and applies Wilson Scoring. This facilitates a less punishing tier calculation for early failures that would otherwise have to be "outpaced", while simultaneously discourages grandfathering older miners who were able to succeed early and cemented their status in a higher tier. The net effect is greater mobility across the tiers, keeping the network competitive while incentivizing reliability and consistency.
 
 For example:
 ```bash
@@ -716,9 +736,10 @@ challenge_successes = 3
 challenge_attempts = 5
 retrieve_successes = 1
 retireve_attempts = 1
-total_successes_epoch = 6
-total_attempts_epoch = 8
-wilson_score = 0.73 # would qualify for Diamond tier this round
+total_successes_epoch = 7
+total_attempts_epoch = 9
+total_successes = 6842
+wilson_score = 0.79
 ```
 
 The scores are then reset, while keeping the total successes for tier recognition:
@@ -729,8 +750,10 @@ challenge_successes = 0
 challenge_attempts = 0
 retrieve_successes = 0
 retrieve_attempts = 0
-total_successes = 6
+total_successes = 6851 # + 9 by aggregating total successs previous 2 epochs
 ```
+
+> This miner would qualify for Diamond tier this round, as it has passed the minimum threshold for total successes (5000) and wilson score (0.77).
 
 ### Speed and Reliability in Decentralized Storage Mining
 
@@ -759,18 +782,20 @@ e.g.
 reward = 1.0 * TIER_FACTOR if task_successful else TASK_NEGATIVE_REWARD * TIER_FACTOR
 
 # For Bronze and challenges
-reward = 1.0 * 0.555 if challenge_successful else -0.05 * 0.555
+reward = 1.0 * 0.5 if challenge_successful else -0.05 * 0.5
 reward
-> 0.555 | -0.02775 # lighter punishment for lower tier failure
+> 0.5 | -0.025 # lighter punishment for lower tier failure
 
 # However for Gold
-reward = 1.0 * 0.777 if challenge_successful else -0.05 * 0.777
+reward = 1.0 * 0.7 if challenge_successful else -0.05 * 0.7
 reward
-> 0.777 | -0.03885 # harsher punishment for higher tier failure
+> 0.7 | -0.035 # harsher punishment for higher tier failure
 ```
 
 The tier system in FileTAO's decentralized storage network plays a pivotal role in ensuring the network's efficiency and reliability. By setting clear performance benchmarks and rewarding miners accordingly, the system fosters a competitive yet fair environment. This encourages continuous improvement among miners, ultimately leading to a robust and trustworthy decentralized storage solution.
 
+### Viewing Wandb Runs
+You can view validator provided run data on wandb by viewing the project found at this [link](https://wandb.ai/philanthrope/philanthropic-thunder/table). This provides information on miner statistics and tier level available to the public.
 
 ## Epoch UID selection
 Miners are chosen pseudorandomly using the current block hash as a random seed. This allows for public verification of which miners are selected for each challenge round (3 blocks).
@@ -813,48 +838,6 @@ pm2 start /home/user/storage-subnet/neurons/miner.py --interpreter /home/user/mi
 
 > Make sure to use absolute paths when executing your pm2 command.
 
-
-#### Options
-
-- `--netuid`: Specifies the chain subnet uid. Default: 21.
-- `--miner.name`: Name of the miner, used for organizing logs and data. Default: "core_storage_miner".
-- `--miner.device`: Device to run the miner on, e.g., "cuda" for GPUs or "cpu" for CPU. Default depends on CUDA availability.
-- `--miner.verbose`: Enables verbose logging. Default: False.
-
-- `--database.host`: Hostname of the redis database. Default: "localhost".
-- `--database.port`: Port for the redis database. Default: 6379.
-- `--database.index`: Redis database index. Default: 0.
-- `--database.directory`: Directory to store local data. Default: "~/.data".
-
-- `--miner.set_weights_wait_for_inclusion`: Wether to wait for the set_weights extrinsic to enter a block. Default: False.
-- `--miner.set_weights_wait_for_finalization`: Wether to wait for the set_weights extrinsic to be finalized on the chain. Default: False.
-
-- `--blacklist.blacklist_hotkeys`: List of hotkeys to blacklist. Default: [].
-- `--blacklist.whitelist_hotkeys`: List of hotkeys to whitelist. Default: [].
-- `--blacklist.force_validator_permit`: If True, only allows requests from validators. Default: False.
-- `--blacklist.allow_non_registered`: If True, allows non-registered hotkeys to mine. Default: False.
-- `--blacklist.minimum_stake_requirement`: Minimum stake requirement for participating hotkeys. Default: 0.0.
-- `--blacklist.min_request_period`: Time period (in minutes) to serve a maximum number of requests per hotkey. Default: 5.
-
-- `--miner.priority.default`: Default priority for non-registered requests. Default: 0.0.
-- `--miner.priority.time_stake_multiplicate`: Time (in minutes) to double the importance of stake in the priority queue. Default: 10.
-- `--miner.priority.len_request_timestamps`: Number of historical request timestamps to record. Default: 50.
-
-- `--miner.no_set_weights`: If True, the miner does not set weights on the chain. Default: False.
-- `--miner.no_serve`: If True, the miner does not serve requests. Default: False.
-- `--miner.no_start_axon`: If True, the miner does not start the axon server. Default: False.
-
-- `--miner.mock_subtensor`: If True, uses a mock subtensor for testing. Default: False.
-
-- `--wandb.off`: Disables Weight and Biases logging. Default: False.
-- `--wandb.project_name`: Project name for WandB logging. Default: "philanthropic-thunder".
-- `--wandb.entity`: WandB entity (username or team name) for the run. Default: "philanthrope".
-- `--wandb.offline`: Runs WandB in offline mode. Default: False.
-- `--wandb.weights_step_length`: Steps interval for logging weights to WandB. Default: 10.
-- `--wandb.run_step_length`: Steps interval for a new run rollover in WandB. Default: 1500.
-- `--wandb.notes`: Notes to add to the WandB run. Default: "".
-
-These options allow you to configure the miner's behavior, database connections, blacklist/whitelist settings, priority handling, and integration with monitoring tools like WandB. Adjust these settings based on your mining setup and requirements.
 
 
 #### Data migration
@@ -930,32 +913,6 @@ REBALANCE_SCRIPT_PATH=/home/user/storage-subnet/scripts/rebalance_deregistration
 
 This way you are able to run your process from anywhere and not rely on relative path resolution to ensure proper functioning of the validator.
 
-#### Options
-
-- `--neuron.name`: Specifies the name of the validator neuron. Default: "core_storage_validator".
-- `--neuron.device`: The device to run the validator on (e.g., "cuda" for GPU, "cpu" for CPU). Default: "cuda" if CUDA is available, else "cpu".
-- `--neuron.curve`: The elliptic curve used for cryptography. Only "P-256" is currently available.
-- `--neuron.maxsize`: The maximum size of random data to store. If `None`, a lognormal random Gaussian distribution is used (default: `None`).
-- `--neuron.min_chunk_size`: The minimum chunk size of random data for challenges. Default: 256.
-- `--neuron.disable_log_rewards`: If set, disables all reward logging to suppress function values from being logged (e.g., to WandB). Default: False.
-- `--neuron.chunk_factor`: The factor to divide data into chunks. Default: 4.
-- `--neuron.num_concurrent_forwards`: The number of concurrent forward requests running at any time. Default: 1.
-- `--neuron.disable_set_weights`: If set, disables setting weights on the chain. Default: False.
-- `--neuron.semaphore_size`: The limit on concurrent asynchronous calls. Default: 256.
-- `--neuron.checkpoint_block_length`: Blocks before a checkpoint is saved. Default: 100.
-- `--neuron.events_retention_size`: File size for retaining event logs (e.g., "2 GB"). Default: "2 GB".
-- `--neuron.dont_save_events`: If set, event logs will not be saved to a file. Default: False.
-- `--neuron.vpermit_tao_limit`: The maximum TAO allowed for querying a validator with a vpermit. Default: 500.
-- `--neuron.verbose`: If set, detailed verbose logs will be printed. Default: False.
-- `--neuron.log_responses`: If set, all responses will be logged. Note: These logs can be extensive. Default: False.
-- `--neuron.data_ttl`: The number of blocks before stored challenge data expires. Default: 50000 (approximately 7 days).
-- `--neuron.profile`: If set, network and I/O actions will be profiled. Default: False.
-
-- `--database.host`: Hostname of the Redis database. Default: "localhost".
-- `--database.port`: Port of the Redis database. Default: 6379.
-- `--database.index`: The database number for the Redis instance. Default: 1.
-
-These options allow you to fine-tune the behavior, storage, and network interaction of the validator neuron. Adjust these settings based on your specific requirements and infrastructure.
 
 > Note: Challenge data lives by default for 5000 blocks in the validator index. This means after 7 days the data is removed and is no longer queried by the validator. This allows miners to recover who have lost challenge data
 
@@ -1037,19 +994,20 @@ To configure your WANDB API key on your Ubuntu machine, follow these steps:
 
    Replace `your_api_key` with the actual API key. This method automatically authenticates you with wandb every time you open a new terminal session.
 
-#### Tips and Best Practices
-
-- **Security**: Keep your API key confidential. Do not share it or commit it to public repositories.
-- **Troubleshooting**: If you encounter issues, check for common problems like incorrect API key entry or network issues.
-- **Usage in Scripts**: For using WANDB in your Python scripts, refer to the WANDB documentation for proper initialization and usage patterns.
-
-Following these steps, you should be able to successfully log into WANDB and set up your API key on your Ubuntu machine, enabling seamless integration of WANDB in your machine learning workflows.
 
 #### Compute Requirements
 No GPU is currently required to run either a validator or miner. This may change in the future for accelerating the proof and/or verification system.
 
 See [`min_compute.yml`](min_compute.yml) for complete details on minimum and recommended requirements.
 
+
+### Testnet
+FileTao runs a testnet to deploy miners and try out miners on `netuid 22`. 
+
+You can access this testnet by adding these to your script:
+```
+--subtensor.network test --netuid 22
+```
 
 ### Local Subtensor
 
@@ -1202,3 +1160,22 @@ Please ensure to path the path to your redis.conf file if it is differen from th
 REDIS_PATH="/path/to/redis.conf"
 bash ./scripts/redis/disable_rdb.sh $REDIS_PATH
 ```
+
+
+## FileTAO Docker
+
+FileTao is now able to run with docker with miner, validator, and api nodes. If running a validator, API nodes are *automatically* deployed in a separate container.
+
+You are free to use this provided docker convenience but may still run nodes on bare-metal. However, it is recommended to upgrade to build and use these docker images, as they are generally more secure and convenient to use.
+
+### Run filetao with docker
+
+ - To run the defined docker compose services {filetao-miner, filetao-validator, redis} you must define environment variables in a `.env` file. To get you started `cp example.env .env` and update the `.env` file with your own values.
+ - Once you have the needed env file, you can run the docker compose containers defined. If you have followed the suggested steps, you can use the following commands:
+     - To run all services (miner, validator, api) on a single host: `sudo docker compose up --build`
+     - To run a single or more services of choices `sudo docker compose up --build {filetao-miner,filetao-validator,filetao-api}` (remove the ones you don't want to run from the command)
+
+
+### Demo notebooks and examples
+
+See [`storage/api/demo_notebook.ipynb`]("docs/api_demo.ipynb") and [`storage/api/example.py`]("storage/api/example.py") To learn different ways to query the subnet.

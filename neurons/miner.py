@@ -130,12 +130,21 @@ class miner:
         bt.logging(config=self.config, logging_dir=self.config.miner.full_path)
         bt.logging.info(f"{self.config}")
 
-        try:
-            asyncio.run(check_environment(self.config.database.redis_conf_path))
-        except AssertionError as e:
-            bt.logging.warning(
-                f"Something is missing in your environment: {e}. Please check your configuration, use the README for help, and try again."
-            )
+        redis_password = get_redis_password(self.config.database.redis_password)
+        if self.config.database.native_environment_check:
+            try:
+                asyncio.run(check_environment(
+                    self.config.database.redis_conf_path,
+                    self.config.database.host,
+                    self.config.database.port,
+                    redis_password
+                ))
+            except AssertionError as e:
+                bt.logging.warning(
+                    f"Something is missing in your environment: {e}. Please check your configuration, use the README for help, and try again."
+                )
+        else:
+            bt.logging.info("Skipping environment checks.")
 
         bt.logging.info("miner.__init__()")
 
@@ -169,7 +178,6 @@ class miner:
 
         # Setup database
         bt.logging.info("loading database")
-        redis_password = get_redis_password(self.config.database.redis_password)
         self.database = aioredis.StrictRedis(
             host=self.config.database.host,
             port=self.config.database.port,
@@ -724,6 +732,8 @@ class miner:
         )
         if data is None:
             bt.logging.error(f"No data found for {synapse.challenge_hash}")
+            synapse.axon.status_code = 404
+            synapse.axon.status_message = "File metadata not found"
             return synapse
 
         bt.logging.trace(f"retrieved data: {pformat(data)}")
@@ -773,10 +783,9 @@ class miner:
         prev_seed = data.get("seed", "").encode()
         bt.logging.debug(f"challenge() prev_seed: {prev_seed}")
         if prev_seed is None:
-            # TODO: this should raise an error that would trigger a 404 response in the axon
-            # Currently, the synapse logs show this as successful, because axon recieves a synapse without
-            # errors. This is a bug and should be addressed in bittensor.
             bt.logging.error(f"No seed found for {synapse.challenge_hash}")
+            synapse.axon.status_code = 404
+            synapse.axon.status_message = "Previous seed not found"
             return synapse
 
         bt.logging.trace("entering comput_subsequent_commitment()...")
@@ -793,7 +802,7 @@ class miner:
         synapse.commitment_proof = proof
 
         # update the commitment seed challenge hash in storage
-        bt.logging.trace(f"udpating challenge miner storage: {pformat(data)}")
+        bt.logging.trace(f"updating challenge miner storage: {pformat(data)}")
         await update_seed_info(
             self.database,
             chunk_hash=synapse.challenge_hash,
@@ -945,7 +954,7 @@ class miner:
             hotkey=synapse.dendrite.hotkey,
             seed=synapse.seed,
         )
-        bt.logging.debug(f"udpated retrieve miner storage: {pformat(data)}")
+        bt.logging.debug(f"updated retrieve miner storage: {pformat(data)}")
 
         # Return base64 data
         bt.logging.trace("entering b64_encode()")

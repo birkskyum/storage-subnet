@@ -53,12 +53,12 @@ def set_weights_for_validator(
         moving_averaged_scores (torch.Tensor): .
         wandb_on (bool, optional): Flag to determine if logging to Weights & Biases is enabled. Defaults to False.
         tempo (int): Tempo for 'netuid' subnet.
-        wait_for_inclusion (bool, optional): Wether to wait for the extrinsic to enter a block
-        wait_for_finalization (bool, optional): Wether to wait for the extrinsic to be finalized on the chain
+        wait_for_inclusion (bool, optional): Whether to wait for the extrinsic to enter a block
+        wait_for_finalization (bool, optional): Whether to wait for the extrinsic to be finalized on the chain
 
     Returns:
         success (bool):
-            flag is true if extrinsic was finalized or uncluded in the block.
+            flag is true if extrinsic was finalized or included in the block.
             If we did not wait for finalization / inclusion, the response is true.
 
     Raises:
@@ -88,7 +88,7 @@ def set_weights_for_validator(
         positive_moving_averaged_scores = moving_averaged_scores_no_nan
     bt.logging.debug(f"Positive scores", positive_moving_averaged_scores)
 
-    # Push all orinally negative indices to zero
+    # Push all originally negative indices to zero
     positive_moving_averaged_scores[neg_idxs] = 0
 
     # Normalize, ensuring no division by zero or NaNs occur

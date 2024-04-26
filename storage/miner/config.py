@@ -171,6 +171,13 @@ def add_args(cls, parser):
         help="Redis configuration path.",
         default="/etc/redis/redis.conf",
     )
+    parser.add_argument(
+        "--database.skip_native_environment_check",
+        dest="database.native_environment_check",
+        action="store_false",
+        default=True,
+        help="Skip native environment check.",
+    )
 
     # Run config.
     parser.add_argument(

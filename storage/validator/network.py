@@ -161,20 +161,19 @@ async def ping_and_retry_uids(
 
         # If enough UIDs are successful, select the first k items
         if len(successful_uids) >= k:
-            uids = list(successful_uids)[:k]
             break
 
         # Reroll for k UIDs excluding the successful ones
-        new_uids = await get_available_query_miners(
+        uids = await get_available_query_miners(
             self, k=k, exclude=list(successful_uids.union(failed_uids))
         )
-        bt.logging.debug(f"ping_and_retry() new uids: {new_uids}")
+        bt.logging.debug(f"ping_and_retry() new uids: {uids}")
         retries += 1
 
     # Log if the maximum retries are reached without enough successful UIDs
     if len(successful_uids) < k:
         bt.logging.warning(
-            f"Insufficient successful UIDs for k: {k} Success UIDs {successful_uids} Failed UIDs: {failed_uids}"
+            f"Insufficient successful UIDs for k: {k} Success UIDs {len(successful_uids)} : {successful_uids} Failed UIDs {len(failed_uids)} : {failed_uids}"
         )
 
     return list(successful_uids)[:k], failed_uids
@@ -195,6 +194,8 @@ async def monitor(self):
 
     down_uids = []
     for uid in failed_uids:
+        if uid not in self.monitor_lookup:
+            self.monitor_lookup[uid] = 0
         self.monitor_lookup[uid] += 1
         if self.monitor_lookup[uid] > 5:
             self.monitor_lookup[uid] = 0

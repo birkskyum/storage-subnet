@@ -237,11 +237,29 @@ async def compute_tier(stats_key: str, database: aioredis.Redis, confidence=0.95
         bt.logging.trace(f"Setting {stats_key} to Super Saiyan tier.")
         tier = "Super Saiyan"
     elif (
+        current_wilson_score >= RUBY_WILSON_SCORE
+        and total_successes >= RUBY_TIER_TOTAL_SUCCESSES
+    ):
+        bt.logging.trace(f"Setting {stats_key} to Ruby tier.")
+        tier = "Ruby"
+    elif (
+        current_wilson_score >= EMERALD_WILSON_SCORE
+        and total_successes >= EMERALD_TIER_TOTAL_SUCCESSES
+    ):
+        bt.logging.trace(f"Setting {stats_key} to Emerald tier.")
+        tier = "Emerald"
+    elif (
         current_wilson_score >= DIAMOND_WILSON_SCORE
         and total_successes >= DIAMOND_TIER_TOTAL_SUCCESSES
     ):
         bt.logging.trace(f"Setting {stats_key} to Diamond tier.")
         tier = "Diamond"
+    elif (
+        current_wilson_score >= PLATINUM_WILSON_SCORE
+        and total_successes >= PLATINUM_TIER_TOTAL_SUCCESSES
+    ):
+        bt.logging.trace(f"Setting {stats_key} to Platinum tier.")
+        tier = "Platinum"
     elif (
         current_wilson_score >= GOLD_WILSON_SCORE
         and total_successes >= GOLD_TIER_TOTAL_SUCCESSES
@@ -264,8 +282,14 @@ async def compute_tier(stats_key: str, database: aioredis.Redis, confidence=0.95
     # Update storage limit based on tier
     if tier == "Super Saiyan":
         storage_limit = STORAGE_LIMIT_SUPER_SAIYAN
+    elif tier == "Ruby":
+        storage_limit = STORAGE_LIMIT_RUBY
+    elif tier == "Emerald":
+        storage_limit = STORAGE_LIMIT_EMERALD
     elif tier == "Diamond":
         storage_limit = STORAGE_LIMIT_DIAMOND
+    elif tier == "Platinum":
+        storage_limit = STORAGE_LIMIT_PLATINUM
     elif tier == "Gold":
         storage_limit = STORAGE_LIMIT_GOLD
     elif tier == "Silver":
@@ -325,8 +349,14 @@ async def get_tier_factor(ss58_address: str, database: aioredis.Redis, in_top_2:
 
     if tier == b"Super Saiyan":
         factor = SUPER_SAIYAN_TIER_REWARD_FACTOR
+    elif tier == b"Ruby":
+        factor = RUBY_TIER_REWARD_FACTOR
+    elif tier == b"Emerald":
+        factor = EMERALD_TIER_REWARD_FACTOR
     elif tier == b"Diamond":
         factor = DIAMOND_TIER_REWARD_FACTOR
+    elif tier == b"Platinum":
+        factor = PLATINUM_TIER_REWARD_FACTOR
     elif tier == b"Gold":
         factor = GOLD_TIER_REWARD_FACTOR
     elif tier == b"Silver":

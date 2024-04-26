@@ -56,6 +56,7 @@ from storage.validator.weights import (
 )
 from storage.validator.forward import forward
 from storage.validator.encryption import setup_encryption_wallet
+from storage.validator.dendrite import timed_dendrite
 
 load_dotenv()
 
@@ -100,8 +101,14 @@ class neuron:
         bt.logging(config=self.config, logging_dir=self.config.neuron.full_path)
         print(self.config)
 
+        redis_password = get_redis_password(self.config.database.redis_password)
         try:
-            asyncio.run(check_environment(self.config.database.redis_conf_path))
+            asyncio.run(check_environment(
+                self.config.database.redis_conf_path,
+                self.config.database.host,
+                self.config.database.port,
+                redis_password
+            ))
         except AssertionError as e:
             bt.logging.warning(
                 f"Something is missing in your environment: {e}. Please check your configuration, use the README for help, and try again."
@@ -155,7 +162,6 @@ class neuron:
 
         # Setup database
         bt.logging.info("loading database")
-        redis_password = get_redis_password(self.config.database.redis_password)
         self.database = aioredis.StrictRedis(
             host=self.config.database.host,
             port=self.config.database.port,
@@ -179,7 +185,8 @@ class neuron:
         if self.config.neuron.mock_dendrite_pool:
             self.dendrite = MockDendrite()
         else:
-            self.dendrite = bt.dendrite(wallet=self.wallet)
+            self.dendrite = timed_dendrite(wallet=self.wallet)
+
         bt.logging.debug(str(self.dendrite))
 
         # Init the event loop.
@@ -355,15 +362,16 @@ class neuron:
             for event in events:
                 event_dict = event["event"].decode()
                 if event_dict["event_id"] == "NeuronRegistered":
-                    netuid, uid, hotkey = event_dict["attributes"]
+                    netuid, uid, new_hotkey = event_dict["attributes"]
                     if int(netuid) == 21:
                         self.log(
                             f"NeuronRegistered Event {uid}! Rebalancing data...\n"
                             f"{pformat(event_dict)}\n"
                         )
-
+                        replaced_hotkey = self.metagraph.hotkeys[uid]
                         self.last_registered_block = block_no
-                        self.rebalance_queue.append(hotkey)
+                        self.rebalance_queue.append(replaced_hotkey)
+                        self.metagraph.hotkeys[uid] = new_hotkey
 
             # If we have some hotkeys deregistered, and it's been 5 blocks since we've caught a registration: rebalance
             if (

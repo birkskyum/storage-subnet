@@ -32,3 +32,4 @@ from . import distribute
 from . import store
 from . import forward
 from . import cid
+from . import dendrite
