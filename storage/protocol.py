@@ -89,6 +89,17 @@ class StoreUser(bt.Synapse):
     )
 
 
+class StoreStreamHandshake(bt.Synapse):
+    # Metadata to send to validator
+    cid: str
+    size: int
+
+    # Return values from validator handshake
+    ip_addr: Optional[str] = None
+    port: Optional[int] = None
+    offset: Optional[int] = None
+
+
 class Challenge(bt.Synapse):
     # Query parameters
     challenge_hash: str  # hash of the data to challenge
